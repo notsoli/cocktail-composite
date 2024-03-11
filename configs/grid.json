@@ -1,0 +1,4 @@
+{
+    "name": "grid",
+    "inline": "let v_~ = #; let $ = fract(v_~); let $ = floor(v_~);"
+}

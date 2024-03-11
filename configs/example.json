@@ -1,0 +1,7 @@
+{
+    "name": "example",
+    "locals": [ "res" ],
+    "globals": [ "frame" ],
+    "function": "fn example(position : vec4f, frame : f32) -> vec4f { return vec4(position.x, position.y, 0.5 + sin(frame / 25.) / 2, 1.); }",
+    "inline": "let $ = example(#, res, frame);"
+}

@@ -1,0 +1,6 @@
+{
+    "name": "normalized_pos",
+    "locals": [ "res" ],
+    "function": "fn normalized_pos(pos : vec4f, res : vec2f) -> vec2f { return pos.xy / res; }",
+    "inline": "let $ = normalized_pos(pos, res);"
+}
