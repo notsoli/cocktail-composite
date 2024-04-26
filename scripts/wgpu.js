@@ -16,21 +16,106 @@ function Uniform(index, size) {
 }
 
 let device, update, defaultBindGroupLayout, pipelineLayout, bindGroup
-const passes = [], data = {}
+let passes = [], data = {}
+let running
 
-const WGPU = {
-    async init(uniforms) {
-        if (!navigator.gpu) { throw Error("WebGPU not supported.") }
-        
-        const adapter = await navigator.gpu.requestAdapter()
-        if (!adapter) { throw Error("Couldn't request WebGPU adapter.") }
+async function init(uniforms) {
+    running = false
+    passes = []
+    data = {}
 
-        device = await adapter.requestDevice()
+    if (!navigator.gpu) { throw Error("WebGPU not supported.") }
+    
+    const adapter = await navigator.gpu.requestAdapter()
+    if (!adapter) { throw Error("Couldn't request WebGPU adapter.") }
 
-        const proxy = new Proxy(uniforms, { set: modifyUniform })
+    device = await adapter.requestDevice()
 
+    const proxy = new Proxy(uniforms, { set: modifyUniform })
+
+    const bindGroupLayoutEntries = [], bindGroupEntries = []
+    Object.entries(uniforms).forEach((entry, index) => {
+        const key = entry[0]
+        const value = entry[1]
+
+        const size = Array.isArray(value) ? value.length : 1
+        const arrayForm = Array.isArray(value) ? value : [value]
+
+        bindGroupLayoutEntries[index] = {
+            binding: index,
+            visibility: GPUShaderStage.FRAGMENT,
+            buffer: { type: 'uniform' }
+        }
+
+        data[key] = new Uniform(index, size)
+        data[key].values.set(arrayForm)
+        bindGroupEntries[index] = { binding: index, resource: { buffer: data[key].buffer }}
+    })
+
+    defaultBindGroupLayout = device.createBindGroupLayout({
+        entries: bindGroupLayoutEntries })
+    pipelineLayout = device.createPipelineLayout({
+        bindGroupLayouts: [ defaultBindGroupLayout ] })
+
+    bindGroup = device.createBindGroup({
+        layout: defaultBindGroupLayout,
+        entries: bindGroupEntries
+    })
+
+    return proxy
+}
+
+async function create_pass(config) {
+    const hasUniforms = (config.uniforms != undefined)
+
+    const vertex = `
+        @vertex
+        fn vertex_main(@location(0) pos : vec2f) ->  @builtin(position) vec4f {
+            return vec4f(pos, 0., 1.); 
+        }
+    `
+
+    const shaderModule = device.createShaderModule({
+        code: vertex + config.fragment })
+
+    const ctx = config.canvas.getContext("webgpu")
+    ctx.configure({
+        device: device,
+        format: navigator.gpu.getPreferredCanvasFormat(),
+        alphaMode: "premultiplied",
+    })
+
+    const verts = new Float32Array([
+        -1.0, -1.0,
+        1.0, -1.0,
+        1.0, 1.0,
+        1.0, 1.0,
+        -1.0, 1.0,
+        -1.0, -1.0
+    ])
+
+    // create & configure vertex buffer
+    const vertexBuffer = device.createBuffer({
+        size: verts.byteLength,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    })
+    device.queue.writeBuffer(vertexBuffer, 0, verts, 0, verts.length)
+
+    const vertexBuffers = [
+        {
+            attributes: [
+                { shaderLocation: 0, offset: 0, format: "float32x2"}
+            ],
+            arrayStride: 8,
+            stepMode: "vertex",
+        },
+    ]
+
+    let newPipelineLayout = pipelineLayout
+    let customBindGroup, passData = {}
+    if (hasUniforms) {
         const bindGroupLayoutEntries = [], bindGroupEntries = []
-        Object.entries(uniforms).forEach((entry, index) => {
+        Object.entries(config.uniforms).forEach((entry, index) => {
             const key = entry[0]
             const value = entry[1]
 
@@ -43,147 +128,70 @@ const WGPU = {
                 buffer: { type: 'uniform' }
             }
 
-            data[key] = new Uniform(index, size)
-            data[key].values.set(arrayForm)
-            bindGroupEntries[index] = { binding: index, resource: { buffer: data[key].buffer }}
+            const newUniform = new Uniform(index, size)
+            passData[key] = newUniform
+            const values = newUniform.values
+            values.set(arrayForm)
+            bindGroupEntries[index] = { binding: index, resource: { buffer: newUniform.buffer }}
         })
 
-        defaultBindGroupLayout = device.createBindGroupLayout({
+        const bindGroupLayout = device.createBindGroupLayout({
             entries: bindGroupLayoutEntries })
-        pipelineLayout = device.createPipelineLayout({
-            bindGroupLayouts: [ defaultBindGroupLayout ] })
+        newPipelineLayout = device.createPipelineLayout({
+            bindGroupLayouts: [ defaultBindGroupLayout, bindGroupLayout ] })
 
-        bindGroup = device.createBindGroup({
-            layout: defaultBindGroupLayout,
+        const newBindGroup = device.createBindGroup({
+            layout: bindGroupLayout,
             entries: bindGroupEntries
         })
+        customBindGroup = newBindGroup
+    }
 
-        return proxy
-    },
-    async create_pass(config) {
-        const hasUniforms = (config.uniforms != undefined)
+    // configure rendering pipeline
+    const pipelineDescriptor = {
+        vertex: { module: shaderModule, entryPoint: "vertex_main", buffers: vertexBuffers },
+        fragment: { module: shaderModule, entryPoint: "fragment_main",
+            targets: [{ format: navigator.gpu.getPreferredCanvasFormat() }]},
+        primitive: { topology: "triangle-list" },
+        layout: newPipelineLayout
+    }
+    const renderPipeline = device.createRenderPipeline(pipelineDescriptor)
 
-        const vertex = `
-            @vertex
-            fn vertex_main(@location(0) pos : vec2f) ->  @builtin(position) vec4f {
-                return vec4f(pos, 0., 1.); 
-            }
-        `
+    let passProxy = null, pass
+    if (hasUniforms) {
+        pass = new Pass(ctx, renderPipeline, vertexBuffer, passData, customBindGroup)
+        config.uniforms.source = pass
+        passProxy = new Proxy(config.uniforms, { set: modifyPassUniform })
+    } else {
+        pass = new Pass(ctx, renderPipeline, vertexBuffer)
+    }
 
-        const shaderModule = device.createShaderModule({
-            code: vertex + config.fragment })
+    passes.push(pass)
+    return passProxy
+}
 
-        const ctx = config.canvas.getContext("webgpu")
-        ctx.configure({
-            device: device,
-            format: navigator.gpu.getPreferredCanvasFormat(),
-            alphaMode: "premultiplied",
-        })
+async function run(_update) {
+    update = _update
 
-        const verts = new Float32Array([
-            -1.0, -1.0,
-            1.0, -1.0,
-            1.0, 1.0,
-            1.0, 1.0,
-            -1.0, 1.0,
-            -1.0, -1.0
-        ])
+    Object.entries(data).forEach((entry) => {
+        const uniform = entry[1]
+        device.queue.writeBuffer(uniform.buffer, 0, uniform.values)
+    })
 
-        // create & configure vertex buffer
-        const vertexBuffer = device.createBuffer({
-            size: verts.byteLength,
-            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-        })
-        device.queue.writeBuffer(vertexBuffer, 0, verts, 0, verts.length)
-
-        const vertexBuffers = [
-            {
-                attributes: [
-                    { shaderLocation: 0, offset: 0, format: "float32x2"}
-                ],
-                arrayStride: 8,
-                stepMode: "vertex",
-            },
-        ]
-
-        let newPipelineLayout = pipelineLayout
-        let customBindGroup, passData = {}
-        if (hasUniforms) {
-            const bindGroupLayoutEntries = [], bindGroupEntries = []
-            Object.entries(config.uniforms).forEach((entry, index) => {
-                const key = entry[0]
-                const value = entry[1]
-    
-                const size = Array.isArray(value) ? value.length : 1
-                const arrayForm = Array.isArray(value) ? value : [value]
-    
-                bindGroupLayoutEntries[index] = {
-                    binding: index,
-                    visibility: GPUShaderStage.FRAGMENT,
-                    buffer: { type: 'uniform' }
-                }
-    
-                const newUniform = new Uniform(index, size)
-                passData[key] = newUniform
-                const values = newUniform.values
-                values.set(arrayForm)
-                bindGroupEntries[index] = { binding: index, resource: { buffer: newUniform.buffer }}
-            })
-    
-            const bindGroupLayout = device.createBindGroupLayout({
-                entries: bindGroupLayoutEntries })
-            newPipelineLayout = device.createPipelineLayout({
-                bindGroupLayouts: [ defaultBindGroupLayout, bindGroupLayout ] })
-    
-            const newBindGroup = device.createBindGroup({
-                layout: bindGroupLayout,
-                entries: bindGroupEntries
-            })
-            customBindGroup = newBindGroup
-        }
-
-        // configure rendering pipeline
-        const pipelineDescriptor = {
-            vertex: { module: shaderModule, entryPoint: "vertex_main", buffers: vertexBuffers },
-            fragment: { module: shaderModule, entryPoint: "fragment_main",
-                targets: [{ format: navigator.gpu.getPreferredCanvasFormat() }]},
-            primitive: { topology: "triangle-list" },
-            layout: newPipelineLayout
-        }
-        const renderPipeline = device.createRenderPipeline(pipelineDescriptor)
-
-        let passProxy = null, pass
-        if (hasUniforms) {
-            pass = new Pass(ctx, renderPipeline, vertexBuffer, passData, customBindGroup)
-            config.uniforms.source = pass
-            passProxy = new Proxy(config.uniforms, { set: modifyPassUniform })
-        } else {
-            pass = new Pass(ctx, renderPipeline, vertexBuffer)
-        }
-
-        passes.push(pass)
-        return passProxy
-    },
-    async run(_update) {
-        update = _update
-
-        Object.entries(data).forEach((entry) => {
+    passes.forEach((pass) => {
+        Object.entries(pass.data).forEach((entry) => {
             const uniform = entry[1]
             device.queue.writeBuffer(uniform.buffer, 0, uniform.values)
         })
+    })
 
-        passes.forEach((pass) => {
-            Object.entries(pass.data).forEach((entry) => {
-                const uniform = entry[1]
-                device.queue.writeBuffer(uniform.buffer, 0, uniform.values)
-            })
-        })
-
-        requestAnimationFrame(render)
-    }
+    running = true
+    requestAnimationFrame(render)
 }
 
 function render() {
+    if (!running) return
+
     passes.forEach((pass) => {
         const commandEncoder = device.createCommandEncoder()
 
@@ -236,4 +244,5 @@ function modifyPassUniform(target, key, value) {
     return value
 }
 
+const WGPU = { init, create_pass, run }
 export default WGPU

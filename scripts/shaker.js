@@ -89,19 +89,41 @@ const Shaker = {
         const config = configs[node.name]
         if (config.inline != undefined) {
             let newInline = config.inline
-            newInline = this.formatInline(newInline, "#", node.inputs)
-            newInline = this.formatInline(newInline, "$", node.outputs)
+            newInline = this.formatInlineIO(newInline, node, config)
+            newInline = this.formatInline(newInline, "$id{}", node.id)
             inlineString += newInline + "\n"
         }
 
         return inlineString
     },
-    formatInline(expression, keyChar, values) {
-        if (values === undefined || values.length == 0) return expression
+    formatInlineIO(expression, node, config) {
+        let inline = expression
+
+        if (config.inputs !== undefined) {
+            for (const input of config.inputs) {
+                const value = (node.inputs[input.name] !== undefined)
+                    ? node.inputs[input.name] : input.default
+                const keyString = "$i{" + input.name + "}"
+                while (inline.includes(keyString))
+                    inline = inline.replace("$i{" + input.name + "}", value)
+            }
+        }
+
+        for (const output of config.outputs) {
+            const value = node.outputs[output.name] // if undefined, panic!!!!
+            const keyString = "$o{" + output.name + "}"
+            while(inline.includes(keyString))
+                inline = inline.replace(keyString, value)
+        }
+
+        return inline
+    },
+    formatInline(expression, keyString, value) {
+        if (value === undefined) return expression
 
         let inline = expression
-        while(inline.includes(keyChar))
-            inline = inline.replace(keyChar, values.shift())
+        while (inline.includes(keyString))
+            inline = inline.replace(keyString, value)
 
         return inline
     }

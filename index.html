@@ -6,11 +6,91 @@
         <script type="module" src="scripts/app.js"></script>
         <link rel="stylesheet" href="styles/reset.css" />
         <link rel="stylesheet" href="styles/style.css" />
-        <title>Cocktail</title>
+        <link rel="stylesheet" href="styles/interface.css" />
+        <title>Cocktail Composite</title>
     </head>
     <body>
-        <canvas id="c1"></canvas>
-        <canvas id="c2"></canvas>
-        <canvas id="c3"></canvas>
+        <div id="persistent-interface">
+            <div id="node-view">
+                <div id="node-header">
+                    <h2 id="standalone-title">untitled visualization</h2>
+                    <div id="top-nav">
+                        <button id="visualize-button" class="top-nav-button">visualize</button>
+                        <h2 id="inline-title">untitled visualization</h2>
+                        <button id="tree-button" class="top-nav-button">T</button>
+                        <button id="variables-button" class="top-nav-button">V</button>
+                    </div>
+                </div>
+                <div id="nodes">
+                    <div id="parent-nodes">
+                        <div class="placeholder-node">+</div>
+                    </div>
+                    <div id="focus-node">
+                        <div class="placeholder-node">+</div>
+                    </div>
+                    <div id="child-nodes">
+                        <div class="placeholder-node">+</div>
+                    </div>
+                </div>
+            </div>
+            <div id="effect-view">
+                <h2>effect toolkit</h2>
+                <div id="effects"></div>
+            </div>
+        </div>
+        <div id="visualizer-view">
+            <div id="visualizer-interface">
+                <button id="exit-visualizer-button" class="visualizer-button"><</button>
+            </div>
+            <canvas id="visualizer-canvas"></canvas>
+        </div>
+        <div id="element-templates">
+            <div id="effect-template" class="effect" draggable="true">
+                <h3></h3>
+                <div class="tooltip"></div>
+                <canvas></canvas>
+            </div>
+            <div class="node">
+                <div class="node-header">
+                    <button class="remove-node-button">X</button>
+                    <h2>node title</h2>
+                    <button class="edit-node-button">E</button>
+                </div>
+                <canvas></canvas>
+                <div class="node-parameters">
+                </div>
+            </div>
+            <div class="small-node">
+                <div class="node-connectors"></div>
+                <div class="node-header">
+                    <button class="remove-node-button">X</button>
+                    <h2>node title</h2>
+                    <button class="edit-node-button">E</button>
+                </div>
+                <canvas></canvas>
+            </div>
+            <div class="node-parameters">
+                <div class="parameter display">
+                    <p>display</p>
+                    <canvas></canvas>
+                    <div class="node-connector"></div>
+                </div>
+                <div class="parameter f32">
+                    <p>f32</p>
+                    <input type="text">
+                    <div class="node-connector"></div>
+                </div>
+                <div class="parameter vec2f">
+                    <p>point</p>
+                    <div class="input-group">
+                        <input type="text">
+                        <span>,</span>
+                        <input type="text">
+                    </div>
+                    <div class="node-connector"></div>
+                </div>
+            </div>
+            <div class="node-connector"></div>
+        </div>
     </body>
 </html>

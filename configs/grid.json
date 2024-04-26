@@ -1,4 +1,28 @@
 {
     "name": "grid",
-    "inline": "let v_~ = #; let $ = fract(v_~); let $ = floor(v_~);"
+    "description": "makes a grid of a specified size out of its input nodes (defaults to 3,3)",
+    "inputs": [
+        {
+            "name": "position",
+            "type": "vec2f",
+            "default": "vec2f(0., 0.)",
+            "display": true
+        },
+        {
+            "name": "tiles",
+            "type": "f32",
+            "default": "3."
+        }
+    ],
+    "outputs": [
+        {
+            "name": "new_position",
+            "type": "vec2f"
+        },
+        {
+            "name": "tile_index",
+            "type": "vec2f"
+        }
+    ],
+    "inline": "let v_$id{} = $i{position} * $i{tiles}; let $o{new_position} = fract(v_$id{}); let $o{tile_index} = floor(v_$id{});"
 }
