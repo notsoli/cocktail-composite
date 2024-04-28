@@ -3,12 +3,11 @@
     "display_name": "normalized position",
     "description": "translates pixel positions into a range from 0 to 1",
     "locals": [ "res" ],
-    "outputs": [
-        {
-            "name": "position",
+    "outputs": {
+        "position": {
             "type": "vec2f"
         }
-    ],
+    },
     "function": "fn normalized_position(pos : vec4f, res : vec2f) -> vec2f { return pos.xy / res; }",
     "inline": "let $o{position} = normalized_position(pos, res);"
 }

@@ -1,26 +1,23 @@
 {
     "name": "distance",
-    "description": "outputs the distance from each pixel to a specified point (defaults to 0,0)",
+    "description": "outputs the distance from each pixel to a specified point (defaults to 0.5,0.5)",
     "locals": [ "res" ],
-    "inputs": [
-        {
-            "name": "position",
+    "inputs": {
+        "position": {
             "type": "vec2f",
-            "default": "vec2(0., 0.)",
+            "default": "pos.xy / res",
             "display": true
         },
-        {
-            "name": "point",
+        "point": {
             "type": "vec2f",
-            "default": "vec2(0., 0.)"
+            "default": "vec2(0.5, 0.5)"
         }
-    ],
-    "outputs": [
-        {
-            "name": "distance",
+    },
+    "outputs": {
+        "distance": {
             "type": "f32"
         }
-    ],
+    },
     "function": "fn distance(pos : vec2f, point: vec2f) -> f32 { return sqrt((pos.x - point.x) * (pos.x - point.x) + (pos.y - point.y) * (pos.y - point.y)); }",
     "inline": "let $o{distance} = distance($i{position}, $i{point});"
 }

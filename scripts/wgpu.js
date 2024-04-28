@@ -17,10 +17,9 @@ function Uniform(index, size) {
 
 let device, update, defaultBindGroupLayout, pipelineLayout, bindGroup
 let passes = [], data = {}
-let running
+let running = false
 
 async function init(uniforms) {
-    running = false
     passes = []
     data = {}
 
@@ -185,12 +184,13 @@ async function run(_update) {
         })
     })
 
-    running = true
-    requestAnimationFrame(render)
+    if (!running) {
+        requestAnimationFrame(render)
+        running = true
+    }
 }
 
 function render() {
-    if (!running) return
 
     passes.forEach((pass) => {
         const commandEncoder = device.createCommandEncoder()

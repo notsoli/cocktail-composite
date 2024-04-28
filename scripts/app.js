@@ -1,9 +1,11 @@
 import { default as WGPU } from './wgpu.js'
 import { default as Shaker } from './shaker.js'
 import { default as Interface } from './interface.js'
+import { default as configs } from './configs.js'
 
 const tree = {
     root: {},
+    effect_nodes: {},
     passes: []
 }
 
@@ -12,6 +14,8 @@ const canvases = {
     effect_canvases: {},
     node_canvases: []
 }
+
+let data
 
 window.onload = async () => {
     canvases.main_canvas = document.querySelector("#visualizer-canvas")
@@ -98,32 +102,40 @@ window.onload = async () => {
         ]
     }
 
-    const effects = [ "distance", "example", "flatten", "grid", "normalized_position" ]
-    await populateConfigs(effects)
+    data = await WGPU.init({ frame: 0 })
+
+    // const effects = [ "distance", "example", "flatten", "grid", "normalized_position" ]
+    // await populateConfigs(effects)
+    App.configs = configs
 
     const interfaceInfo = await Interface.init()
     canvases.effect_canvases = interfaceInfo.effect_canvases
+    generateEffectPreviews()
 
-    const passes = await buildShaders(config_2)
+    // const passes = await buildShaders(config_2)
 
-    window.onresize = () => {
-        canvases.main_canvas.width = window.innerWidth
-        canvases.main_canvas.height = window.innerHeight
-        passes[0].res = [ window.innerWidth, window.innerHeight ]
-    }
+    // window.onresize = () => {
+    //     canvases.main_canvas.width = window.innerWidth
+    //     canvases.main_canvas.height = window.innerHeight
+    //     passes[0].res = [ window.innerWidth, window.innerHeight ]
+    // }
+
+    await buildShaders(tree)
 }
 
 async function buildShaders(config) {
-    const wgpuconfig = {
-        data: { frame: 0 },
-        p1: { res: [ window.innerWidth, window.innerHeight ] }
-    }
-
-    const data = await WGPU.init(wgpuconfig.data)
-
     const passes = []
-    for (const passConfig of config.passes) {
-        const rootNode = findNodeFromID(config.root, passConfig.root_id)
+    for (const passID in config.passes) {
+        const passConfig = config.passes[passID]
+
+        // there's a better way to do this
+        let rootNode
+        if (typeof passConfig.root_id === "string") {
+            rootNode = config.effect_nodes[passConfig.root_id]
+        } else {
+            rootNode = findNodeFromID(config.root, passConfig.root_id)
+        }
+
         const newConfig = {
             root: rootNode,
             return: passConfig.return
@@ -171,23 +183,39 @@ function addNodeAsRoot(nodeid, config) {
     tree.root = node
 
     const defaultOutputKey = Object.keys(node.outputs)[0]
-    const defaultOutputName = node.outputs[defaultOutputKey]
-    let defaultOutputConfig
-    for (const output of config.outputs) {
-        if (output.name === defaultOutputKey) {
-            defaultOutputConfig = output
-            break
-        }
-    }
 
-    tree.passes = [{
+    tree.passes.push({
         root_id: nodeid,
         canvas: canvases.main_canvas,
         uniforms: { res: [ window.innerWidth, window.innerHeight ] },
-        return: formatOutputToColor(defaultOutputName, defaultOutputConfig)
-    }]
+        return: formatOutputToColor(node.outputs[defaultOutputKey], config.outputs[defaultOutputKey])
+    })
+
     buildShaders(tree)
     return tree.root
+}
+
+function generateEffectPreviews() {
+    for (const config_name in canvases.effect_canvases) {
+        const canvas = canvases.effect_canvases[config_name]
+        const config = App.configs[config_name]
+
+        const node = formatNodeConfig(0, config)
+        tree.effect_nodes[config_name] = node
+    
+        const defaultOutputKey = Object.keys(node.outputs)[0]
+    
+        tree.passes.push({
+            root_id: config_name,
+            canvas: canvas,
+            uniforms: { res: [ canvas.width, canvas.height ] },
+            return: formatOutputToColor(node.outputs[defaultOutputKey], config.outputs[defaultOutputKey])
+        })
+    }
+}
+
+function generateNodePreviews() {
+    // TODO
 }
 
 function addNodeAsChild(parentid, nodeid, config) {
@@ -196,7 +224,6 @@ function addNodeAsChild(parentid, nodeid, config) {
     parentNode.children.push(childNode)
 
     buildShaders(tree)
-    console.log(tree)
     return childNode
 }
 
@@ -209,12 +236,12 @@ function formatNodeConfig(nodeid, config) {
         children: []
     }
 
-    if (Array.isArray(config.inputs)) {
-        for (const input of config.inputs)
-            node.inputs[input.name] = input.default
+    if (config.inputs !== undefined) {
+        for (const input_name in config.inputs)
+            node.inputs[input_name] = config.inputs[input_name].default
     }
-    for (const output of config.outputs)
-        node.outputs[output.name] = `${output.name}_${nodeid}`
+    for (const output_name in config.outputs)
+        node.outputs[output_name] = `${output_name}_${nodeid}`
 
     return node
 }
@@ -247,11 +274,49 @@ function findNodeByID(root, nodeid) {
     return null
 }
 
+// feed the output of a child node into the input of a parent node
+function linkParameter(childID, childParameter, parentID, parentParameter) {
+    const childNode = findNodeByID(tree.root, childID)
+    const parentNode = findNodeByID(tree.root, parentID)
+
+    const childParameterName = childNode.outputs[childParameter]
+    parentNode.inputs[parentParameter] = childParameterName
+
+    buildShaders(tree)
+}
+
+function addNodePass(_nodeid, canvas) {
+    const nodeid = (typeof _nodeid === "string") ? parseInt(_nodeid) : _nodeid
+
+    // if passes targeting this canvas already exist, remove them
+    for (const passID in tree.passes) {
+        const pass = tree.passes[passID]
+        if (pass.canvas === canvas)
+            tree.passes = tree.passes.splice(passID, passID)
+    }
+
+    const node = findNodeByID(tree.root, nodeid)
+    const config = App.configs[node.name]
+
+    const defaultOutputKey = Object.keys(node.outputs)[0]
+    
+    tree.passes.push({
+        root_id: nodeid,
+        canvas: canvas,
+        uniforms: { res: [ canvas.width, canvas.height ] },
+        return: formatOutputToColor(node.outputs[defaultOutputKey], config.outputs[defaultOutputKey])
+    })
+
+    buildShaders(tree)
+}
+
 const App = {
     configs: {},
     current_nodeid: 0,
     addNodeAsRoot,
-    addNodeAsChild
+    addNodeAsChild,
+    linkParameter,
+    addNodePass
 }
 
 export default App

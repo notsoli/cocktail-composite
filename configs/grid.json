@@ -1,28 +1,27 @@
 {
     "name": "grid",
     "description": "makes a grid of a specified size out of its input nodes (defaults to 3,3)",
-    "inputs": [
-        {
-            "name": "position",
+    "locals": [ "res" ],
+    "inputs": {
+        "position": {
             "type": "vec2f",
-            "default": "vec2f(0., 0.)",
+            "default": "pos.xy / res",
             "display": true
         },
-        {
-            "name": "tiles",
+        "tiles": {
             "type": "f32",
             "default": "3."
         }
-    ],
-    "outputs": [
-        {
-            "name": "new_position",
+    },
+    "outputs": {
+        "new_position": {
+            "display_name": "new position",
             "type": "vec2f"
         },
-        {
-            "name": "tile_index",
+        "tile_index": {
+            "display_name": "tile index",
             "type": "vec2f"
         }
-    ],
+    },
     "inline": "let v_$id{} = $i{position} * $i{tiles}; let $o{new_position} = fract(v_$id{}); let $o{tile_index} = floor(v_$id{});"
 }

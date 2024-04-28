@@ -1,3 +1,5 @@
+import { default as App } from './app.js'
+
 const Shaker = {
     localTypes: {
         'res': 'vec2f'
@@ -7,7 +9,7 @@ const Shaker = {
     },
     async build(config) {
         // translate node names into their actual config objects
-        const configs = await this.loadConfigs(config.root)
+        const configs = App.configs
 
         // assemble local and global uniform lists
         const localUniforms = this.assembleUniformList(config.root, "locals", configs)
@@ -41,25 +43,9 @@ const Shaker = {
         shader += this.assembleInlines(config.root, configs)
 
         shader += `return ${config.return};\n}\n`
-        console.log(shader)
+        // console.log(shader)
 
         return shader
-    },
-    async loadConfigs(node, targetObject) {
-        const configObject = (targetObject === undefined) ? {} : targetObject
-
-        // recurse over children
-        for (const child of node.children)
-            await this.loadConfigs(child, configObject)
-
-        // load configs based on element name if not added already
-        if (configObject[node.name] === undefined) {
-            const configText = await fetch(`../configs/${node.name}.json`)
-            const config = await configText.json()
-            configObject[node.name] = config
-        }
-
-        return configObject
     },
     assembleUniformList(node, uniformType, configs, targetArray) {
         const uniformArray = (targetArray === undefined) ? [] : targetArray
@@ -100,18 +86,19 @@ const Shaker = {
         let inline = expression
 
         if (config.inputs !== undefined) {
-            for (const input of config.inputs) {
-                const value = (node.inputs[input.name] !== undefined)
-                    ? node.inputs[input.name] : input.default
-                const keyString = "$i{" + input.name + "}"
+            for (const input_name in config.inputs) {
+                const input_config = config.inputs[input_name]
+                const value = (node.inputs[input_name] !== undefined)
+                    ? node.inputs[input_name] : input_config.default
+                const keyString = "$i{" + input_name + "}"
                 while (inline.includes(keyString))
-                    inline = inline.replace("$i{" + input.name + "}", value)
+                    inline = inline.replace("$i{" + input_name + "}", value)
             }
         }
 
-        for (const output of config.outputs) {
-            const value = node.outputs[output.name] // if undefined, panic!!!!
-            const keyString = "$o{" + output.name + "}"
+        for (const output_name in config.outputs) {
+            const value = node.outputs[output_name] // if undefined, panic!!!!
+            const keyString = "$o{" + output_name + "}"
             while(inline.includes(keyString))
                 inline = inline.replace(keyString, value)
         }

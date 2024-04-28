@@ -171,6 +171,10 @@ function addFocusNode() {
 
     const node = App.addNodeAsRoot(nodeid, config)
     const nodeElement = constructFocusNode(node, config)
+
+    const canvas = nodeElement.querySelector("canvas")
+    App.addNodePass(nodeid, canvas)
+
     document.querySelector("#focus-node").appendChild(nodeElement)
     state.focused_node = nodeid
     changeNodeAction(NodeAction.none)
@@ -187,7 +191,8 @@ function constructFocusNode(node, config) {
     const nodeParameters = newNode.querySelector(".node-parameters")
     const parameterTemplates = document.querySelector("#element-templates>.node-parameters")
     if (config.inputs !== undefined) {
-        for (const input of config.inputs) {
+        for (const input_name in config.inputs) {
+            const input = config.inputs[input_name]
             const newParameter = (input.display)
                 ? parameterTemplates.querySelector(".display").cloneNode(true)
                 : parameterTemplates.querySelector(`.${input.type}`).cloneNode(true)
@@ -197,12 +202,23 @@ function constructFocusNode(node, config) {
                 continue
             }
 
-            newParameter.querySelector("p").innerText = getDisplayName(input)
-            newParameter.dataset.name = input.name
+            newParameter.querySelector("p").innerText = getDisplayName(input, input_name)
+            newParameter.dataset.name = input_name
             newParameter.dataset.type = input.type
+
+            newParameter.onclick = linkParameter
 
             nodeParameters.appendChild(newParameter)
         }
+    } else {
+        nodeParameters.remove()
+    }
+
+    const removeButton = newNode.querySelector(".remove-node-button")
+    removeButton.onclick = () => {
+        // newNode.remove()
+        // state.focused_node = null
+        // changeNodeAction(NodeAction.add)
     }
 
     return newNode
@@ -250,6 +266,10 @@ function addChildNode() {
 
     const node = App.addNodeAsChild(parentid, nodeid, config)
     const nodeElement = constructSmallNode(node, config)
+
+    const canvas = nodeElement.querySelector("canvas")
+    App.addNodePass(nodeid, canvas)
+
     document.querySelector("#child-nodes").appendChild(nodeElement)
     changeNodeAction(NodeAction.none)
 }
@@ -259,10 +279,11 @@ function constructSmallNode(node, config) {
     const newNode = smallNodeTemplate.cloneNode(true)
 
     const nodeConnectors = newNode.querySelector(".node-connectors")
-    for (const output of config.outputs) {
+    for (const output_name in config.outputs) {
+        const output = config.outputs[output_name]
         const nodeConnector = document.querySelector("#element-templates>.node-connector").cloneNode(true)
-        nodeConnector.dataset.name = output.name
-        nodeConnector.dataset.name = output.type
+        nodeConnector.dataset.name = output_name
+        nodeConnector.dataset.type = output.type
 
         nodeConnector.onclick = selectParameter
 
@@ -277,26 +298,63 @@ function constructSmallNode(node, config) {
 }
 
 function selectParameter() {
+    if (state.selected_parameter != null) return
+
     const connectors = document.querySelectorAll(".node-connector")
     for (const connector of connectors) connector.classList.remove("active-connector")
-
     this.classList.add("active-connector")
 
     const node = this.parentElement.parentElement
     const parentNode = document.querySelector("#focus-node>.node")
-    console.log(parentNode)
+    const parentParameters = parentNode.querySelectorAll(".parameter")
 
-    state.selected_parameter = {
-        node: node.nodeid,
-        parameter: this.dataset.name,
-        type: this.dataset.type
+    for (const parameter of parentParameters) {
+        if (this.dataset.type == parameter.dataset.type) {
+            parameter.classList.add("active-parameter")
+            parameter.querySelector(".node-connector").classList.add("active-connector")
+        }
     }
 
-
+    state.selected_parameter = {
+        node: node.dataset.nodeid,
+        name: this.dataset.name,
+        type: this.dataset.type
+    }
 }
 
-function getDisplayName(config) {
-    return (config.display_name !== undefined) ? config.display_name : config.name
+function linkParameter() {
+    // make sure a parameter is already selected and this parameter is active
+    if (state.selected_parameter == null || !this.classList.contains("active-parameter")) return
+
+    // make sure the parameter types match. this shouldn't fail but idk it might
+    if (state.selected_parameter.type !== this.dataset.type) return
+
+    const node = this.parentElement.parentElement
+
+    App.linkParameter(
+        state.selected_parameter.node,
+        state.selected_parameter.name,
+        node.dataset.nodeid,
+        this.dataset.name
+    )
+
+    if (this.classList.contains("display")) {
+        const canvas = this.querySelector("canvas")
+        App.addNodePass(state.selected_parameter.node, canvas)
+    } 
+
+    const connectors = document.querySelectorAll(".node-connector")
+    for (const connector of connectors) connector.classList.remove("active-connector")
+
+    state.selected_parameter = null
+}
+
+function getDisplayName(config, name) {
+    if (name === undefined) {
+        return (config.display_name !== undefined) ? config.display_name : config.name
+    } else {
+        return (config.display_name !== undefined) ? config.display_name : name
+    }
 }
 
 // export public functions

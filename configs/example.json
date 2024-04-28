@@ -3,12 +3,12 @@
     "description": "example node used for testing",
     "locals": [ "res" ],
     "globals": [ "frame" ],
-    "outputs": [
-        {
-            "name": "new_color",
+    "outputs": {
+        "new_color": {
+            "display_name": "new color",
             "type": "vec4f"
         }
-    ],
+    },
     "function": "fn example(position : vec2f, frame : f32) -> vec4f { return vec4(position.x, position.y, 0.5 + sin(frame / 25.) / 2, 1.); }",
     "inline": "let $o{new_color} = example(pos.xy / res, frame);"
 }

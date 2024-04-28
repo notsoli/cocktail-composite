@@ -3,20 +3,19 @@
     "description": "example node used for testing",
     "locals": [ "res" ],
     "globals": [ "frame" ],
-    "inputs": [
-        {
-            "name": "normalized_position",
+    "inputs": {
+        "normalized_position": {
             "display_name": "normalized position",
             "type": "vec2f",
             "default": "vec2(0., 0.)"
         }
-    ],
-    "outputs": [
-        {
-            "name": "new_color",
+    },
+    "outputs": {
+        "new_color": {
+            "display_name": "new color",
             "type": "vec4f"
         }
-    ],
+    },
     "function": "fn example(position : vec2f, frame : f32) -> vec4f { return vec4(position.x, position.y, 0.5 + sin(frame / 25.) / 2, 1.); }",
     "inline": "let $o{new_color} = example($i{normalized_position}, frame);"
 }
