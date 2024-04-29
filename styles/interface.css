@@ -122,7 +122,7 @@
     display: flex;
 }
 
-#parent-nodes>.placeholder-node, #child-nodes>.placeholder-node {
+#parent-node>.placeholder-node, #child-nodes>.placeholder-node {
     width: 150px;
     height: 150px;
 }
@@ -143,8 +143,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: var(--small-gap);
-    padding-bottom: 0px;
+    padding: 0 var(--small-gap);
     gap: var(--small-gap);
 }
 
@@ -182,11 +181,11 @@
     flex-direction: column;
     align-items: center;
     padding: var(--small-gap);
-    padding-top: 0px;
     gap: var(--small-gap);
+    cursor: pointer;
 }
 
-.small-node>.node-connectors {
+.small-node>.node-connectors, .node>.node-connectors {
     width: 100%;
     display: flex;
     justify-content: space-around;
@@ -226,12 +225,23 @@
     height: 125px;
 }
 
+/* parent node */
+
+.small-node.parent-node {
+    padding-bottom: 0px;
+}
+
+/* child node */
+
+.small-node.child-node {
+    padding-top: 0px;
+}
+
 /* node parameters */
 
 .node-parameters {
     display: flex;
     gap: var(--small-gap);
-    height: 125px;
 }
 
 .parameter {
@@ -240,9 +250,7 @@
     align-items: center;
     gap: 5px;
     position: relative;
-    padding: var(--small-gap);
-    padding-top: 0;
-    padding-bottom: 0;
+    padding: 0 var(--small-gap);
 }
 
 .parameter.active-parameter {
@@ -254,8 +262,8 @@
 }
 
 .parameter.display>canvas{
-    width: 75px;
-    height: 75px;
+    width: 50px;
+    height: 50px;
 }
 
 .parameter.f32>input {
@@ -273,19 +281,6 @@
 
 .parameter.vec2f input {
     width: 30px;
-}
-
-/* mini node */
-.mini-node {
-    display: flex;
-    box-sizing: border-box;
-    width: 200px;
-    height: 200px;
-}
-
-.mini-node>canvas {
-    width: 100px;
-    height: 100px;
 }
 
 /* effects */

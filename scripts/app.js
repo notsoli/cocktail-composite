@@ -192,7 +192,6 @@ function addNodeAsRoot(nodeid, config) {
     })
 
     buildShaders(tree)
-    return tree.root
 }
 
 function generateEffectPreviews() {
@@ -214,17 +213,41 @@ function generateEffectPreviews() {
     }
 }
 
-function generateNodePreviews() {
-    // TODO
+function addNodeAsParent(childid, nodeid, config) {
+    const parentNode = findParentByID(childid)
+
+    let childNode
+    if (parentNode !== null) {
+        for (const childIndex in parentNode.children) {
+            const child = parentNode.children[childIndex]
+            if (child.id == childid) {
+                childNode = child
+                parentNode.children.splice(childIndex, childIndex)
+                break
+            }
+        }
+    }
+
+    const newParentNode = formatNodeConfig(nodeid, config)
+
+    if (parentNode == null) {
+        newParentNode.children.push(tree.root)
+        tree.root = newParentNode
+        addNodePass(nodeid, canvases.main_canvas)
+    } else {
+        newParentNode.children.push(childNode)
+        parentNode.children.push(newParentNode)
+    }
+
+    buildShaders(tree)
 }
 
 function addNodeAsChild(parentid, nodeid, config) {
     const childNode = formatNodeConfig(nodeid, config)
-    const parentNode = findNodeByID(tree.root, parentid)
+    const parentNode = findNodeByID(parentid)
     parentNode.children.push(childNode)
 
     buildShaders(tree)
-    return childNode
 }
 
 function formatNodeConfig(nodeid, config) {
@@ -261,12 +284,13 @@ function formatOutputToColor(outputName, outputConfig) {
     }
 }
 
-function findNodeByID(root, nodeid) {
+function findNodeByID(nodeid, root) {
+    if (root === undefined) root = tree.root
     if (root.id == nodeid) {
         return root
     } else {
         for (const child of root.children) {
-            const childResult = findNodeByID(child, nodeid)
+            const childResult = findNodeByID(nodeid, child)
             if (childResult != null) return childResult
         }
     }
@@ -274,10 +298,23 @@ function findNodeByID(root, nodeid) {
     return null
 }
 
+function findParentByID(nodeid, root) {
+    if (root === undefined) root = tree.root
+    if (root.id === nodeid) return null
+
+    for (const child of root.children) {
+        if (child.id === nodeid) return root
+        const childResult = findParentByID(nodeid, child)
+        if (childResult != null) return childResult
+    }
+
+    return null
+}
+
 // feed the output of a child node into the input of a parent node
 function linkParameter(childID, childParameter, parentID, parentParameter) {
-    const childNode = findNodeByID(tree.root, childID)
-    const parentNode = findNodeByID(tree.root, parentID)
+    const childNode = findNodeByID(childID)
+    const parentNode = findNodeByID(parentID)
 
     const childParameterName = childNode.outputs[childParameter]
     parentNode.inputs[parentParameter] = childParameterName
@@ -289,13 +326,9 @@ function addNodePass(_nodeid, canvas) {
     const nodeid = (typeof _nodeid === "string") ? parseInt(_nodeid) : _nodeid
 
     // if passes targeting this canvas already exist, remove them
-    for (const passID in tree.passes) {
-        const pass = tree.passes[passID]
-        if (pass.canvas === canvas)
-            tree.passes = tree.passes.splice(passID, passID)
-    }
+    clearPasses(canvas)
 
-    const node = findNodeByID(tree.root, nodeid)
+    const node = findNodeByID(nodeid)
     const config = App.configs[node.name]
 
     const defaultOutputKey = Object.keys(node.outputs)[0]
@@ -310,13 +343,32 @@ function addNodePass(_nodeid, canvas) {
     buildShaders(tree)
 }
 
+function clearPasses(canvas) {
+    for (const passID in tree.passes) {
+        const pass = tree.passes[passID]
+        if (pass.canvas === canvas) tree.passes[passID] = null
+    }
+    tree.passes = tree.passes.filter((entry) => entry !== null)
+}
+
+function updateParameter(nodeid, parameter, value) {
+    const node = findNodeByID(nodeid)
+    node.inputs[parameter] = value
+    buildShaders(tree)
+}
+
 const App = {
     configs: {},
     current_nodeid: 0,
     addNodeAsRoot,
+    addNodeAsParent,
     addNodeAsChild,
     linkParameter,
-    addNodePass
+    addNodePass,
+    clearPasses,
+    findNodeByID,
+    findParentByID,
+    updateParameter
 }
 
 export default App

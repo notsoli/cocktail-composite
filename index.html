@@ -22,7 +22,7 @@
                     </div>
                 </div>
                 <div id="nodes">
-                    <div id="parent-nodes">
+                    <div id="parent-node">
                         <div class="placeholder-node">+</div>
                     </div>
                     <div id="focus-node">
@@ -45,12 +45,13 @@
             <canvas id="visualizer-canvas"></canvas>
         </div>
         <div id="element-templates">
-            <div id="effect-template" class="effect" draggable="true">
+            <div class="effect" draggable="true">
                 <h3></h3>
                 <div class="tooltip"></div>
                 <canvas></canvas>
             </div>
             <div class="node">
+                <div class="node-connectors"></div>
                 <div class="node-header">
                     <button class="remove-node-button">X</button>
                     <h2>node title</h2>
@@ -60,7 +61,7 @@
                 <div class="node-parameters">
                 </div>
             </div>
-            <div class="small-node">
+            <div class="small-node child-node">
                 <div class="node-connectors"></div>
                 <div class="node-header">
                     <button class="remove-node-button">X</button>
@@ -68,6 +69,15 @@
                     <button class="edit-node-button">E</button>
                 </div>
                 <canvas></canvas>
+            </div>
+            <div class="small-node parent-node">
+                <div class="node-header">
+                    <button class="remove-node-button">X</button>
+                    <h2>node title</h2>
+                    <button class="edit-node-button">E</button>
+                </div>
+                <canvas></canvas>
+                <div class="node-connectors"></div>
             </div>
             <div class="node-parameters">
                 <div class="parameter display">
@@ -83,9 +93,9 @@
                 <div class="parameter vec2f">
                     <p>point</p>
                     <div class="input-group">
-                        <input type="text">
+                        <input type="text" class="x-input">
                         <span>,</span>
-                        <input type="text">
+                        <input type="text" class="y-input">
                     </div>
                     <div class="node-connector"></div>
                 </div>

@@ -56,7 +56,7 @@ const configs = {
                 "type": "f32"
             }
         },
-        "inline": "let $o{flattened_value} = step($i{cutoff}, $i{value});"
+        "inline": "let $o{flattened_value} = smoothstep($i{cutoff}, $i{cutoff} + 0.01, $i{value});"
     },
     grid: {
         "name": "grid",
@@ -70,7 +70,7 @@ const configs = {
             },
             "tiles": {
                 "type": "f32",
-                "default": "3."
+                "default": 3.0
             }
         },
         "outputs": {
@@ -97,6 +97,31 @@ const configs = {
         },
         "function": "fn normalized_position(pos : vec4f, res : vec2f) -> vec2f { return pos.xy / res; }",
         "inline": "let $o{position} = normalized_position(pos, res);"
+    },
+    // colorize: {
+    //     "name": "colorize",
+    //     "description": "converts values from a 0-1 range into a blend of two color values"
+    // }
+    wave: {
+        "name": "wave",
+        "description": "generates a value between 0 and a specified amplitude that oscillates over time.",
+        "globals": [ "frame" ],
+        "inputs": {
+            "amplitude": {
+                "type": "f32",
+                "default": 1.0,
+            },
+            "frequency": {
+                "type": "f32",
+                "default": "1"
+            }
+        },
+        "outputs": {
+            "value": {
+                "type": "f32"
+            }
+        },
+        "inline": "let $o{value} = (sin(frame / 30. * $i{frequency}) * 0.5 + 0.5) * $i{amplitude};"
     }
 }
 
