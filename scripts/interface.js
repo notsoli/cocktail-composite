@@ -202,7 +202,7 @@ function constructFocusNode(node) {
     if (config.inputs !== undefined) {
         for (const input_name in config.inputs) {
             const input = config.inputs[input_name]
-            const newParameter = assembleParameter(node.id, input_name, input)
+            const newParameter = assembleParameter(node, input_name, input)
             if (newParameter == null) continue
             nodeParameters.appendChild(newParameter)
         }
@@ -234,10 +234,17 @@ function constructFocusNode(node) {
     return newNode
 }
 
-function assembleParameter(nodeid, input_name, input) {
+function assembleParameter(node, input_name, input) {
     let newParameter
     if (input.display) {
         newParameter = elements.parameter_templates.querySelector(".display").cloneNode(true)
+        const canvas = newParameter.querySelector("canvas")
+        canvas.width = 50
+        canvas.height = 50
+        const nodeInput = node.inputs[input_name]
+        if (nodeInput.linked != null) {
+            App.addNodePass(nodeInput.linked, canvas)
+        }
     } else {
         newParameter = elements.parameter_templates.querySelector(`.${input.type}`).cloneNode(true)
         switch (input.type) {
@@ -263,7 +270,7 @@ function assembleParameter(nodeid, input_name, input) {
 
     const inputs = newParameter.querySelectorAll("input")
     for (const input of inputs) {
-        input.onchange = () => {updateParameter(nodeid, newParameter)}
+        input.onchange = () => {updateParameter(node.id, newParameter)}
     }
 
     newParameter.onclick = linkParameter

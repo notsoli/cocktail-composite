@@ -88,8 +88,8 @@ const Shaker = {
         if (config.inputs !== undefined) {
             for (const input_name in config.inputs) {
                 const input_config = config.inputs[input_name]
-                const value = (node.inputs[input_name] !== undefined)
-                    ? node.inputs[input_name] : input_config.default
+                const value = (node.inputs[input_name].value !== undefined)
+                    ? node.inputs[input_name].value : input_config.default
                 const keyString = "$i{" + input_name + "}"
                 while (inline.includes(keyString))
                     inline = inline.replace("$i{" + input_name + "}", value)

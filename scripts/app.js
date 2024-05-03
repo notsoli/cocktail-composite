@@ -190,8 +190,12 @@ function formatNodeConfig(nodeid, config) {
     }
 
     if (config.inputs !== undefined) {
-        for (const input_name in config.inputs)
-            node.inputs[input_name] = config.inputs[input_name].default
+        for (const input_name in config.inputs) {
+            node.inputs[input_name] = {
+                value: config.inputs[input_name].default,
+                linked: null
+            }
+        }
     }
     for (const output_name in config.outputs)
         node.outputs[output_name] = `${output_name}_${nodeid}`
@@ -247,7 +251,10 @@ function linkParameter(childID, childParameter, parentID, parentParameter) {
     const parentNode = findNodeByID(parentID)
 
     const childParameterName = childNode.outputs[childParameter]
-    parentNode.inputs[parentParameter] = childParameterName
+    parentNode.inputs[parentParameter] = {
+        value: childParameterName,
+        linked: parseInt(childID)
+    }
 
     buildShaders(tree)
 }
