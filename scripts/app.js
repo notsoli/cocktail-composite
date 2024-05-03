@@ -22,86 +22,6 @@ window.onload = async () => {
     canvases.main_canvas.width = window.innerWidth
     canvases.main_canvas.height = window.innerHeight
 
-    const config_1 = {
-        root: {
-            name: "example",
-            id: 2,
-            inputs: {
-                normalized_position: "grid_pos"
-            },
-            outputs: {
-                new_color: "color"
-            },
-            children: [
-                { name: "grid",
-                id: 1,
-                inputs: {
-                    tiles: "4.0",
-                    position: "norm_pos"
-                },
-                outputs: {
-                    new_position: "grid_pos",
-                    tile_index: "grid_index"
-                },
-                children: [
-                    { name: "normalized_position",
-                    id: 0,
-                    inputs: {},
-                    outputs: { position: "norm_pos" },
-                    children: [] }
-                ] }
-            ]
-        },
-        passes: [
-            {
-                root_id: 2,
-                canvas: canvases.main_canvas,
-                uniforms: { res: [ window.innerWidth, window.innerHeight ] },
-                return: "color",
-            }
-        ]
-    }
-    
-    const config_2 = {
-        root: {
-            name: "distance",
-            id: 2,
-            inputs: {
-                position: "grid_pos",
-                point: "vec2(0.5, 0.5)"
-            },
-            outputs: {
-                distance: "distance"
-            },
-            children: [
-                { name: "grid",
-                id: 1,
-                inputs: {
-                    tiles: "3.0",
-                    position: "norm_pos"
-                },
-                outputs: {
-                    new_position: "grid_pos",
-                    tile_index: "grid_index"
-                },
-                children: [
-                    { name: "normalized_position",
-                    id: 0,
-                    inputs: {},
-                    outputs: { position: "norm_pos" },
-                    children: [] }
-                ] }
-            ] },
-        passes: [
-            {
-                root_id: 2,
-                canvas: canvases.main_canvas,
-                uniforms: { res: [ window.innerWidth, window.innerHeight ] },
-                return: "vec4(distance, distance, distance, 1.0)",
-            }
-        ]
-    }
-
     data = await WGPU.init({ frame: 0 })
 
     // const effects = [ "distance", "example", "flatten", "grid", "normalized_position" ]
@@ -114,18 +34,13 @@ window.onload = async () => {
 
     // const passes = await buildShaders(config_2)
 
-    // window.onresize = () => {
-    //     canvases.main_canvas.width = window.innerWidth
-    //     canvases.main_canvas.height = window.innerHeight
-    //     passes[0].res = [ window.innerWidth, window.innerHeight ]
-    // }
-
     await buildShaders(tree)
 }
 
 async function buildShaders(config) {
     WGPU.clear_passes()
     
+    let mainPass
     const passes = []
     for (const passID in config.passes) {
         const passConfig = config.passes[passID]
@@ -150,7 +65,14 @@ async function buildShaders(config) {
             uniforms: passConfig.uniforms
         })
 
+        if (passConfig.canvas === canvases.main_canvas) mainPass = pass
+
         passes.push(pass)
+    }
+
+    if (mainPass !== undefined) {
+        window.onresize = () => { resizeMainCanvas(mainPass) }
+        resizeMainCanvas(mainPass)
     }
 
     WGPU.run(() => {
@@ -158,6 +80,12 @@ async function buildShaders(config) {
     })
 
     return passes
+}
+
+function resizeMainCanvas(passConfig) {
+    canvases.main_canvas.width = window.innerWidth
+    canvases.main_canvas.height = window.innerHeight
+    passConfig.res = [ window.innerWidth, window.innerHeight ]
 }
 
 function findNodeFromID(root, nodeid) {
