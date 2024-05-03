@@ -294,7 +294,7 @@
 
 .effect {
     display: flex;
-    max-width: 150px;
+    max-width: 140px;
     padding: var(--small-gap);
     border-radius: 5px;
     flex-direction: column;

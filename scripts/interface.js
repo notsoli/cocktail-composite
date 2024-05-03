@@ -139,6 +139,9 @@ async function populateToolkit() {
 
         newEffect.querySelector("h3").innerText = getDisplayName(config)
         newEffect.querySelector(".tooltip").innerText = config.description
+        const canvas = newEffect.querySelector("canvas")
+        canvas.width = 100
+        canvas.height = 100
 
         newEffect.dataset.name = config.name
         elements.effects.appendChild(newEffect)
@@ -224,6 +227,8 @@ function constructFocusNode(node) {
     }
 
     const canvas = newNode.querySelector("canvas")
+    canvas.width = 175
+    canvas.height = 175
     App.addNodePass(node.id, canvas)
 
     return newNode
@@ -368,6 +373,8 @@ function constructParentNode(node) {
     newNode.querySelector(".node-header>h2").innerText = getDisplayName(config)
 
     const canvas = newNode.querySelector("canvas")
+    canvas.width = 125
+    canvas.height = 125
     App.addNodePass(node.id, canvas)
 
     newNode.onclick = (event) => {
@@ -403,6 +410,8 @@ function constructChildNode(node) {
     newNode.querySelector(".node-header>h2").innerText = getDisplayName(config)
 
     const canvas = newNode.querySelector("canvas")
+    canvas.width = 125
+    canvas.height = 125
     App.addNodePass(node.id, canvas)
 
     newNode.onclick = (event) => {

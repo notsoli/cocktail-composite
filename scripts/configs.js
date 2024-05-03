@@ -104,7 +104,7 @@ const configs = {
     // }
     wave: {
         "name": "wave",
-        "description": "generates a value between 0 and a specified amplitude that oscillates over time.",
+        "description": "generates a value between 0 and a specified amplitude that oscillates over time",
         "globals": [ "frame" ],
         "inputs": {
             "amplitude": {
@@ -122,6 +122,48 @@ const configs = {
             }
         },
         "inline": "let $o{value} = (sin(frame / 30. * $i{frequency}) * 0.5 + 0.5) * $i{amplitude};"
+    },
+    center_position: {
+        "name": "center_position",
+        "display_name": "center position",
+        "description": "translates ranges from 0 to 1 into -1 to 1",
+        "locals": [ "res" ],
+        "inputs": {
+            "position": {
+                "type": "vec2f",
+                "default": "pos.xy / res",
+                "display": true
+            }
+        },
+        "outputs": {
+            "centered_position": {
+                "display_name": "centered position",
+                "type": "vec2f"
+            }
+        },
+        "function": "fn center_position(pos : vec2f) -> vec2f { return pos * 2. - 1.; }",
+        "inline": "let $o{centered_position} = center_position($i{position});"
+    },
+    aspect_adjust: {
+        "name": "aspect_adjust",
+        "display_name": "aspect adjust",
+        "description": "adjusts x position to account for aspect ratio, fixing output squish/stretch",
+        "locals": [ "res" ],
+        "inputs": {
+            "position": {
+                "type": "vec2f",
+                "default": "(pos.xy / res)",
+                "display": true
+            }
+        },
+        "outputs": {
+            "adjusted_position": {
+                "type": "vec2f",
+                "display_name": "adjusted position",
+            }
+        },
+        "function": "fn aspect_adjust(pos : vec2f, res : vec2f) -> vec2f { return vec2(pos.x * (res.x / res.y), pos.y); }",
+        "inline": "let $o{adjusted_position} = aspect_adjust($i{position}, res);"
     }
 }
 
