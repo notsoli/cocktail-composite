@@ -20,6 +20,8 @@ let passes = [], data = {}
 let running = false
 
 async function init(uniforms) {
+    if (device != undefined) device.destroy()
+
     passes = []
     data = {}
 
@@ -244,5 +246,9 @@ function modifyPassUniform(target, key, value) {
     return value
 }
 
-const WGPU = { init, create_pass, run }
+function clear_passes() {
+    passes = []
+}
+
+const WGPU = { init, create_pass, run, clear_passes }
 export default WGPU

@@ -124,6 +124,8 @@ window.onload = async () => {
 }
 
 async function buildShaders(config) {
+    WGPU.clear_passes()
+    
     const passes = []
     for (const passID in config.passes) {
         const passConfig = config.passes[passID]
