@@ -1,7 +1,7 @@
-import { default as WGPU } from './wgpu'
-import { default as Shaker } from './shaker'
-import { default as Interface } from './interface'
-import { default as configs } from './configs'
+import { default as WGPU } from './wgpu.js'
+import { default as Shaker } from './shaker.js'
+import { default as Interface } from './interface.js'
+import { default as configs } from './configs.js'
 
 const tree = {
     root: {},
