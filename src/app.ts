@@ -1,7 +1,7 @@
-import { default as WGPU } from './wgpu.js'
-import { default as Shaker } from './shaker.js'
-import { default as Interface } from './interface.js'
-import { default as configs } from './configs.js'
+import { default as WGPU } from './wgpu'
+import { default as Shaker } from './shaker'
+import { default as Interface } from './interface'
+import { default as configs } from './configs'
 
 const tree = {
     root: {},
@@ -214,7 +214,7 @@ function formatOutputToColor(outputName, outputConfig) {
     }
 }
 
-function findNodeByID(nodeid, root) {
+function findNodeByID(nodeid, root?) {
     if (root === undefined) root = tree.root
     if (root.id == nodeid) {
         return root
@@ -228,7 +228,7 @@ function findNodeByID(nodeid, root) {
     return null
 }
 
-function findParentByID(nodeid, root) {
+function findParentByID(nodeid, root?) {
     if (root === undefined) root = tree.root
     if (root.id === nodeid) return null
 

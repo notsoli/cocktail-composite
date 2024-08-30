@@ -1,0 +1,22 @@
+{
+  "name": "cocktail-composite",
+  "version": "1.0.0",
+  "description": "A tree-based shader compositing tool.",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/notsoli/cocktail-composite.git"
+  },
+  "author": "notsoli",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/notsoli/cocktail-composite/issues"
+  },
+  "homepage": "https://github.com/notsoli/cocktail-composite#readme",
+  "dependencies": {
+    "typescript": "^5.5.4"
+  }
+}
