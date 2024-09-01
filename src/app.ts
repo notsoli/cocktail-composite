@@ -3,19 +3,52 @@ import { default as Shaker } from './shaker.js'
 import { default as Interface } from './interface.js'
 import { default as configs } from './configs.js'
 
-const tree = {
-    root: {},
+import { UniformValues } from './wgpu.js'
+import { NodeConfig, OutputConfig } from './configs.js'
+
+export interface Config {
+    root: Node
+    effect_nodes: {[x: string]: any}
+    passes: PassConfig[]
+    return: string
+}
+
+class PassConfig {
+    root_id: number | string
+    canvas: HTMLCanvasElement
+    uniforms: Object
+    return: string
+}
+
+export class Node {
+    id: number
+    name: string
+    inputs: {[x: string]: any}
+    outputs: {[x: string]: string}
+    children: Node[]
+
+    constructor(id:number, name: string, inputs: {[x: string]: any}, outputs: {[x: string]: string}) {
+        this.id = id
+        this.name = name
+        this.inputs = inputs
+        this.outputs = outputs
+        this.children = []
+    }
+}
+
+const tree: Config = {
+    root: null,
     effect_nodes: {},
-    passes: []
+    passes: [],
+    return: null
 }
 
-const canvases = {
+const canvases: {main_canvas: HTMLCanvasElement, effect_canvases: {[x: string]: HTMLCanvasElement}} = {
     main_canvas: null,
-    effect_canvases: {},
-    node_canvases: []
+    effect_canvases: {}
 }
 
-let data
+let data: UniformValues
 
 window.onload = async () => {
     canvases.main_canvas = document.querySelector("#visualizer-canvas")
@@ -37,11 +70,10 @@ window.onload = async () => {
     await buildShaders(tree)
 }
 
-async function buildShaders(config) {
+async function buildShaders(config: Config) {
     WGPU.clear_passes()
     
-    let mainPass
-    const passes = []
+    let mainPassUniforms: UniformValues
     for (const passID in config.passes) {
         const passConfig = config.passes[passID]
 
@@ -53,42 +85,41 @@ async function buildShaders(config) {
             rootNode = findNodeFromID(config.root, passConfig.root_id)
         }
 
-        const newConfig = {
+        const newConfig: Config = {
             root: rootNode,
-            return: passConfig.return
+            return: passConfig.return,
+            effect_nodes: {},
+            passes: []
         }
 
         const frag = await Shaker.build(newConfig)
-        const pass = await WGPU.create_pass({
+        const passUniforms = await WGPU.create_pass({
             canvas: passConfig.canvas,
             fragment: frag,
-            uniforms: passConfig.uniforms
+            uniformValues: passConfig.uniforms
         })
 
-        if (passConfig.canvas === canvases.main_canvas) mainPass = pass
-
-        passes.push(pass)
+        if (passConfig.canvas === canvases.main_canvas) mainPassUniforms = passUniforms
     }
 
-    if (mainPass !== undefined) {
-        window.onresize = () => { resizeMainCanvas(mainPass) }
-        resizeMainCanvas(mainPass)
+    if (mainPassUniforms !== undefined) {
+        window.onresize = () => { resizeMainCanvas(mainPassUniforms) }
+        resizeMainCanvas(mainPassUniforms)
     }
 
     WGPU.run(() => {
-        data.frame++
+        (data.frame as number)++ // kinda ew, sorry
     })
-
-    return passes
 }
 
-function resizeMainCanvas(passConfig) {
+function resizeMainCanvas(uniforms: UniformValues) {
     canvases.main_canvas.width = window.innerWidth
     canvases.main_canvas.height = window.innerHeight
-    passConfig.res = [ window.innerWidth, window.innerHeight ]
+    uniforms.res = [ window.innerWidth, window.innerHeight ]
+
 }
 
-function findNodeFromID(root, nodeid) {
+function findNodeFromID(root: Node, nodeid: number): Node {
     if (root.id === nodeid) { return root }
     else {
         for (const node of root.children) {
@@ -100,18 +131,17 @@ function findNodeFromID(root, nodeid) {
     return null
 }
 
-async function populateConfigs(effects) {
-    for (const effect of effects) {
-        const configText = await fetch(`../configs/${effect}.json`)
-        const config = await configText.json()
-        App.configs[effect] = config
-    }
-}
+// async function populateConfigs(effects) {
+//     for (const effect of effects) {
+//         const configText = await fetch(`../configs/${effect}.json`)
+//         const config = await configText.json()
+//         App.configs[effect] = config
+//     }
+// }
 
-function addNodeAsRoot(nodeid, config) {
+function addNodeAsRoot(nodeid: number, config: NodeConfig) {
     const node = formatNodeConfig(nodeid, config)
     tree.root = node
-
     const defaultOutputKey = Object.keys(node.outputs)[0]
 
     tree.passes.push({
@@ -143,16 +173,16 @@ function generateEffectPreviews() {
     }
 }
 
-function addNodeAsParent(childid, nodeid, config) {
+function addNodeAsParent(childid: number, nodeid: number, config: NodeConfig) {
     const parentNode = findParentByID(childid)
 
     let childNode
     if (parentNode !== null) {
-        for (const childIndex in parentNode.children) {
-            const child = parentNode.children[childIndex]
+        for (let c = 0; c < parentNode.children.length; c++) {
+            const child = parentNode.children[c]
             if (child.id == childid) {
                 childNode = child
-                parentNode.children.splice(childIndex, childIndex)
+                parentNode.children.splice(c, c)
                 break
             }
         }
@@ -172,7 +202,7 @@ function addNodeAsParent(childid, nodeid, config) {
     buildShaders(tree)
 }
 
-function addNodeAsChild(parentid, nodeid, config) {
+function addNodeAsChild(parentid: number, nodeid: number, config: NodeConfig) {
     const childNode = formatNodeConfig(nodeid, config)
     const parentNode = findNodeByID(parentid)
     parentNode.children.push(childNode)
@@ -180,26 +210,23 @@ function addNodeAsChild(parentid, nodeid, config) {
     buildShaders(tree)
 }
 
-function formatNodeConfig(nodeid, config) {
-    const node = {
-        name: (config.internal_name !== undefined) ? config.internal_name : config.name,
-        id: nodeid,
-        inputs: {},
-        outputs: {},
-        children: []
-    }
-
+function formatNodeConfig(nodeid: number, config: NodeConfig) {
+    const inputs: {[x: string]: any} = {}
     if (config.inputs !== undefined) {
         for (const input_name in config.inputs)
-            node.inputs[input_name] = config.inputs[input_name].default
+            inputs[input_name] = config.inputs[input_name].default
     }
-    for (const output_name in config.outputs)
-        node.outputs[output_name] = `${output_name}_${nodeid}`
 
-    return node
+    const outputs: {[x: string]: string} = {}
+    for (const output_name in config.outputs)
+        outputs[output_name] = `${output_name}_${nodeid}`
+
+    const newNode = new Node(nodeid, config.name, inputs, outputs)
+
+    return newNode
 }
 
-function formatOutputToColor(outputName, outputConfig) {
+function formatOutputToColor(outputName: string, outputConfig: OutputConfig) {
     switch (outputConfig.type) {
         case "f32":
             return `vec4(vec3(${outputName}), 1.)`
@@ -214,7 +241,7 @@ function formatOutputToColor(outputName, outputConfig) {
     }
 }
 
-function findNodeByID(nodeid, root?) {
+function findNodeByID(nodeid: number, root?: Node): Node {
     if (root === undefined) root = tree.root
     if (root.id == nodeid) {
         return root
@@ -228,7 +255,7 @@ function findNodeByID(nodeid, root?) {
     return null
 }
 
-function findParentByID(nodeid, root?) {
+function findParentByID(nodeid: number, root?: Node): Node {
     if (root === undefined) root = tree.root
     if (root.id === nodeid) return null
 
@@ -242,7 +269,7 @@ function findParentByID(nodeid, root?) {
 }
 
 // feed the output of a child node into the input of a parent node
-function linkParameter(childID, childParameter, parentID, parentParameter) {
+function linkParameter(childID: number, childParameter: string, parentID: number, parentParameter: string) {
     const childNode = findNodeByID(childID)
     const parentNode = findNodeByID(parentID)
 
@@ -252,7 +279,7 @@ function linkParameter(childID, childParameter, parentID, parentParameter) {
     buildShaders(tree)
 }
 
-function addNodePass(_nodeid, canvas) {
+function addNodePass(_nodeid: number, canvas: HTMLCanvasElement) {
     const nodeid = (typeof _nodeid === "string") ? parseInt(_nodeid) : _nodeid
 
     // if passes targeting this canvas already exist, remove them
@@ -273,7 +300,7 @@ function addNodePass(_nodeid, canvas) {
     buildShaders(tree)
 }
 
-function clearPasses(canvas) {
+function clearPasses(canvas: HTMLCanvasElement) {
     for (const passID in tree.passes) {
         const pass = tree.passes[passID]
         if (pass.canvas === canvas) tree.passes[passID] = null
@@ -281,14 +308,14 @@ function clearPasses(canvas) {
     tree.passes = tree.passes.filter((entry) => entry !== null)
 }
 
-function updateParameter(nodeid, parameter, value) {
+function updateParameter(nodeid: number, parameter: string, value: any) {
     const node = findNodeByID(nodeid)
     node.inputs[parameter] = value
     buildShaders(tree)
 }
 
 const App = {
-    configs: {},
+    configs,
     current_nodeid: 0,
     addNodeAsRoot,
     addNodeAsParent,

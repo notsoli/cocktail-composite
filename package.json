@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/notsoli/cocktail-composite#readme",
   "dependencies": {
+    "@webgpu/types": "^0.1.44",
     "typescript": "^5.5.4"
   }
 }

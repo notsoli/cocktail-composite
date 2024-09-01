@@ -1,26 +1,43 @@
 import { default as App } from './app.js'
+import { Node } from './app.js'
+import { InputConfig, NodeConfig, OutputConfig } from './configs.js'
 
-const View = {
-    node: Symbol("node"),
-    visualizer: Symbol("preview"),
-    tree: Symbol("tree"),
-    variables: Symbol("variable")
+enum View {
+    Node,
+    Visualizer,
+    Tree,
+    Variables
 }
 
-const NodeAction = {
-    none: Symbol("none"),
-    add: Symbol("add")
+enum NodeAction {
+    None,
+    Add
 }
 
-const state = {
-    current_view: View.node,
-    current_node_action: NodeAction.none,
+interface SelectedParameter {
+    node: number
+    name: string
+    type: string // replace with type enum at some point
+}
+
+interface State {
+    current_view: View
+    current_node_action: NodeAction
+    focused_node: number
+    selected_effect: string
+    selected_parameter: SelectedParameter
+}
+
+const state: State = {
+    current_view: View.Node,
+    current_node_action: NodeAction.None,
     focused_node: null,
     selected_effect: null,
     selected_parameter: null
 }
 
-const elements = {}
+const elements: {[x: string]: HTMLElement} = {}
+let effectElements: HTMLElement[]
 
 async function init() {
     // query elements
@@ -45,19 +62,19 @@ async function init() {
     elements.templates = document.querySelector("#element-templates")
 
     // set current state
-    changeView(View.node)
-    changeNodeAction(NodeAction.add)
+    changeView(View.Node)
+    changeNodeAction(NodeAction.Add)
 
     // link onclick events
-    elements.visualize_button.onclick = () => { changeView(View.visualizer) }
-    elements.tree_button.onclick = () => { changeView(View.tree) }
-    elements.variables_button.onclick = () => { changeView(View.variables) }
-    elements.exit_visualizer_button.onclick = () => { changeView(View.node) }
+    elements.visualize_button.onclick = () => { changeView(View.Visualizer) }
+    elements.tree_button.onclick = () => { changeView(View.Tree) }
+    elements.variables_button.onclick = () => { changeView(View.Variables) }
+    elements.exit_visualizer_button.onclick = () => { changeView(View.Node) }
 
     // generate toolkit entries and link event listeners
-    elements.effects = await populateToolkit()
-    const effect_canvases = {}
-    for (const element of elements.effects) {
+    effectElements = await populateToolkit()
+    const effect_canvases: {[x: string]: HTMLCanvasElement} = {}
+    for (const element of effectElements) {
         element.onclick = selectEffect
         element.ondragstart = selectEffect
 
@@ -83,19 +100,19 @@ async function init() {
     return { effect_canvases: effect_canvases }
 }
 
-function changeView(newView) {
+function changeView(newView: View) {
     switch (newView) {
-        case View.node:
+        case View.Node:
             elements.persistent_interface.classList.add("active-view")
             elements.node_view.classList.add("active-view")
             elements.visualizer_view.classList.remove("active-view")
             break
-        case View.visualizer:
+        case View.Visualizer:
             elements.visualizer_view.classList.add("active-view")
             elements.persistent_interface.classList.remove("active-view")
             break
-        case View.variables:
-        case View.tree:
+        case View.Variables:
+        case View.Tree:
             console.warn("View not implemented")
             break
         default:
@@ -106,12 +123,12 @@ function changeView(newView) {
     state.current_view = newView
 }
 
-function changeNodeAction(newNodeAction) {
-    if (newNodeAction == NodeAction.none) {
+function changeNodeAction(newNodeAction: NodeAction) {
+    if (newNodeAction == NodeAction.None) {
         elements.parent_placeholder_node.classList.remove("active-placeholder")
         elements.focus_placeholder_node.classList.remove("active-placeholder")
         elements.child_placeholder_node.classList.remove("active-placeholder")
-    } else if (newNodeAction == NodeAction.add) {
+    } else if (newNodeAction == NodeAction.Add) {
         if (state.focused_node != null) {
             elements.parent_placeholder_node.classList.add("active-placeholder")
             elements.focus_placeholder_node.classList.remove("active-placeholder")
@@ -135,10 +152,10 @@ async function populateToolkit() {
 
     for (const configName in App.configs) {
         const config = App.configs[configName]
-        const newEffect = template.cloneNode(true)
+        const newEffect = template.cloneNode(true) as HTMLElement
 
-        newEffect.querySelector("h3").innerText = getDisplayName(config)
-        newEffect.querySelector(".tooltip").innerText = config.description
+        newEffect.querySelector("h3").innerText = getNodeName(config)
+        newEffect.querySelector(".tooltip").innerHTML = config.description
         const canvas = newEffect.querySelector("canvas")
         canvas.width = 100
         canvas.height = 100
@@ -154,7 +171,7 @@ async function populateToolkit() {
 function selectEffect() {
     state.selected_effect = this.dataset.name
 
-    for (const element of elements.effects)
+    for (const element of effectElements)
         element.classList.remove("selected-effect")
     this.classList.add("selected-effect")
 
@@ -162,10 +179,10 @@ function selectEffect() {
     elements.focus_placeholder_node.classList.add("pointer")
     elements.child_placeholder_node.classList.add("pointer")
 
-    changeNodeAction(NodeAction.add)
+    changeNodeAction(NodeAction.Add)
 }
 
-function enableDrop(event) { event.preventDefault() }
+function enableDrop(event: DragEvent) { event.preventDefault() }
 
 function addFocusNode() {
     if (state.selected_effect === null) {
@@ -185,18 +202,18 @@ function addFocusNode() {
     App.addNodeAsRoot(nodeid, config)
     state.focused_node = nodeid
     constructNodeView()
-    changeNodeAction(NodeAction.none)
+    changeNodeAction(NodeAction.None)
 }
 
-function constructFocusNode(node) {
+function constructFocusNode(node: Node) {
     const nodeTemplate = elements.templates.querySelector(".node")
-    const newNode = nodeTemplate.cloneNode(true)
+    const newNode = nodeTemplate.cloneNode(true) as HTMLElement
 
     const config = App.configs[node.name]
 
-    newNode.dataset.nodeid = node.id
+    newNode.dataset.nodeid = node.id.toString()
     newNode.dataset.name = config.name
-    newNode.querySelector(".node-header>h2").innerText = getDisplayName(config)
+    newNode.querySelector(".node-header>h2").innerHTML = getNodeName(config)
 
     const nodeParameters = newNode.querySelector(".node-parameters")
     if (config.inputs !== undefined) {
@@ -211,7 +228,7 @@ function constructFocusNode(node) {
     const nodeConnectors = newNode.querySelector(".node-connectors")
     for (const output_name in config.outputs) {
         const output = config.outputs[output_name]
-        const nodeConnector = elements.templates.querySelector(".node-connector").cloneNode(true)
+        const nodeConnector = elements.templates.querySelector(".node-connector").cloneNode(true) as HTMLElement
         nodeConnector.dataset.name = output_name
         nodeConnector.dataset.type = output.type
 
@@ -219,7 +236,7 @@ function constructFocusNode(node) {
         nodeConnectors.appendChild(nodeConnector)
     }
 
-    const removeButton = newNode.querySelector(".remove-node-button")
+    const removeButton = newNode.querySelector(".remove-node-button") as HTMLElement
     removeButton.onclick = () => {
         // newNode.remove()
         // state.focused_node = null
@@ -234,12 +251,12 @@ function constructFocusNode(node) {
     return newNode
 }
 
-function assembleParameter(nodeid, input_name, input) {
-    let newParameter
+function assembleParameter(nodeid: number, input_name: string, input: InputConfig) {
+    let newParameter: HTMLElement
     if (input.display) {
-        newParameter = elements.parameter_templates.querySelector(".display").cloneNode(true)
+        newParameter = elements.parameter_templates.querySelector(".display").cloneNode(true) as HTMLElement
     } else {
-        newParameter = elements.parameter_templates.querySelector(`.${input.type}`).cloneNode(true)
+        newParameter = elements.parameter_templates.querySelector(`.${input.type}`).cloneNode(true) as HTMLElement
         switch (input.type) {
             case "f32":
                 newParameter.querySelector("input").value = input.default
@@ -247,8 +264,12 @@ function assembleParameter(nodeid, input_name, input) {
             case "vec2f":
                 const csv = input.default.match(/(?<=vec2\()(.*)(?=\))/)[0]
                 const values = csv.split(", ")
-                newParameter.querySelector(".x-input").value = values[0]
-                newParameter.querySelector(".y-input").value = values[1]
+
+                const xInput = newParameter.querySelector(".x-input") as HTMLInputElement
+                xInput.value = values[0]
+
+                const yInput = newParameter.querySelector(".y-input") as HTMLInputElement
+                yInput.value = values[1]
         }
     }
 
@@ -257,7 +278,7 @@ function assembleParameter(nodeid, input_name, input) {
         return null
     }
 
-    newParameter.querySelector("p").innerText = getDisplayName(input, input_name)
+    newParameter.querySelector("p").innerText = getParameterName(input, input_name)
     newParameter.dataset.name = input_name
     newParameter.dataset.type = input.type
 
@@ -271,33 +292,39 @@ function assembleParameter(nodeid, input_name, input) {
     return newParameter
 }
 
-function updateParameter(nodeid, parameter) {
+// TODO: make parameter its own type that extends HTMLElement
+function updateParameter(nodeid: number, parameter: HTMLElement) {
+    console.log(parameter)
     let newValue
     switch (parameter.dataset.type) {
         case "f32":
             let floatValue = parseFloat(parameter.querySelector("input").value)
-            if (floatValue == NaN) {
-                console.warning("Entered value cannot be parsed as a float!")
+            if (isNaN(floatValue)) {
+                console.warn("Entered value cannot be parsed as a float!")
                 return
             }
-            floatValue = floatValue.toString()
-            if (!floatValue.includes(".")) floatValue += "."
+            let floatText = floatValue.toString()
+            if (!floatText.includes(".")) floatText += "."
             
             newValue = floatValue
             break
         case "vec2f":
-            let xValue = parseFloat(parameter.querySelector(".x-input").value)
-            let yValue = parseFloat(parameter.querySelector(".y-input").value)
-            if (isNaN(parseFloat(xValue)) || isNaN(parseFloat(yValue))) {
+            const xInput = parameter.querySelector(".x-input") as HTMLInputElement
+            const xValue = parseFloat(xInput.value)
+
+            const yInput = parameter.querySelector(".y-input") as HTMLInputElement
+            const yValue = parseFloat(yInput.value)
+
+            if (isNaN(xValue) || isNaN(yValue)) {
                 console.warn("Entered value cannot be parsed as a float!")
                 return
             }
-            xValue = xValue.toString()
-            if (!xValue.includes(".")) xValue += "."
-            yValue = yValue.toString()
-            if (!yValue.includes(".")) yValue += "."
+            let xText = xValue.toString()
+            if (!xText.includes(".")) xText += "."
+            let yText = yValue.toString()
+            if (!yText.includes(".")) yText += "."
 
-            newValue = `vec2(${xValue}, ${yValue})`
+            newValue = `vec2(${xText}, ${yText})`
         case "display":
             break
         default:
@@ -324,7 +351,7 @@ function addParentNode() {
 
     App.addNodeAsParent(state.focused_node, nodeid, config)
     constructNodeView()
-    changeNodeAction(NodeAction.none)
+    changeNodeAction(NodeAction.None)
 }
 
 function addChildNode() {
@@ -343,24 +370,24 @@ function addChildNode() {
     const nodeid = App.current_nodeid++
 
     // find parent id
-    const parentElement = document.querySelector("#focus-node>.node")
-    const parentid = parentElement.dataset.nodeid
+    const parentElement = document.querySelector("#focus-node>.node") as HTMLElement
+    const parentid = parseInt(parentElement.dataset.nodeid)
 
     App.addNodeAsChild(parentid, nodeid, config)
     constructNodeView()
-    changeNodeAction(NodeAction.none)
+    changeNodeAction(NodeAction.None)
 }
 
-function constructParentNode(node) {
+function constructParentNode(node: Node) {
     const smallNodeTemplate = elements.templates.querySelector(".small-node.parent-node")
-    const newNode = smallNodeTemplate.cloneNode(true)
+    const newNode = smallNodeTemplate.cloneNode(true) as HTMLElement
 
     const config = App.configs[node.name]
 
     const nodeConnectors = newNode.querySelector(".node-connectors")
     for (const input_name in config.inputs) {
         const input = config.inputs[input_name]
-        const nodeConnector = elements.templates.querySelector(".node-connector").cloneNode(true)
+        const nodeConnector = elements.templates.querySelector(".node-connector").cloneNode(true) as HTMLElement
         nodeConnector.dataset.name = input_name
         nodeConnector.dataset.type = input.type
 
@@ -368,9 +395,9 @@ function constructParentNode(node) {
         nodeConnectors.appendChild(nodeConnector)
     }
 
-    newNode.dataset.nodeid = node.id
+    newNode.dataset.nodeid = node.id.toString()
     newNode.dataset.name = config.name
-    newNode.querySelector(".node-header>h2").innerText = getDisplayName(config)
+    newNode.querySelector(".node-header>h2").innerHTML = getNodeName(config)
 
     const canvas = newNode.querySelector("canvas")
     canvas.width = 125
@@ -388,16 +415,16 @@ function constructParentNode(node) {
     return newNode
 }
 
-function constructChildNode(node) {
+function constructChildNode(node: Node) {
     const smallNodeTemplate = elements.templates.querySelector(".small-node.child-node")
-    const newNode = smallNodeTemplate.cloneNode(true)
+    const newNode = smallNodeTemplate.cloneNode(true) as HTMLElement
 
     const config = App.configs[node.name]
 
     const nodeConnectors = newNode.querySelector(".node-connectors")
     for (const output_name in config.outputs) {
         const output = config.outputs[output_name]
-        const nodeConnector = elements.templates.querySelector(".node-connector").cloneNode(true)
+        const nodeConnector = elements.templates.querySelector(".node-connector").cloneNode(true) as HTMLElement
         nodeConnector.dataset.name = output_name
         nodeConnector.dataset.type = output.type
 
@@ -405,9 +432,9 @@ function constructChildNode(node) {
         nodeConnectors.appendChild(nodeConnector)
     }
 
-    newNode.dataset.nodeid = node.id
+    newNode.dataset.nodeid = node.id.toString()
     newNode.dataset.name = config.name
-    newNode.querySelector(".node-header>h2").innerText = getDisplayName(config)
+    newNode.querySelector(".node-header>h2").innerHTML = getNodeName(config)
 
     const canvas = newNode.querySelector("canvas")
     canvas.width = 125
@@ -425,7 +452,7 @@ function constructChildNode(node) {
     return newNode
 }
 
-function focusNode(nodeid) {
+function focusNode(nodeid: number) {
     state.focused_node = nodeid
     constructNodeView()
 }
@@ -441,7 +468,7 @@ function selectParameter() {
     if (node.classList.contains("node")) {
         const parentConnectors = document.querySelectorAll("#parent-node .node-connector")
         for (const connector of parentConnectors) {
-            if (this.dataset.type == connector.dataset.type) {
+            if (this.dataset.type == (connector as HTMLElement).dataset.type) {
                 connector.classList.add("active-connector")
             }
         }
@@ -450,7 +477,7 @@ function selectParameter() {
         const parentParameters = parentNode.querySelectorAll(".parameter")
     
         for (const parameter of parentParameters) {
-            if (this.dataset.type == parameter.dataset.type) {
+            if (this.dataset.type == (parameter as HTMLElement).dataset.type) {
                 parameter.classList.add("active-parameter")
                 parameter.querySelector(".node-connector").classList.add("active-connector")
             }
@@ -464,22 +491,22 @@ function selectParameter() {
     }
 }
 
-function deselect(event) {
+function deselect(event: MouseEvent) {
     const deselectIDs = [
         'nodes', 'parent-node', 'focus-node',
         'child-nodes', 'effect-view', 'effects'
     ]
 
-    if (!deselectIDs.includes(event.target.id)) return
+    if (!deselectIDs.includes((event.target as HTMLElement).id)) return
 
     state.selected_effect = null
     state.selected_parameter = null
 
-    for (const element of elements.effects) element.classList.remove("selected-effect")
+    for (const element of effectElements) element.classList.remove("selected-effect")
     const connectors = document.querySelectorAll(".node-connector")
     for (const connector of connectors) connector.classList.remove("active-connector")
 
-    if (state.focused_node != null) changeNodeAction(NodeAction.none)
+    if (state.focused_node != null) changeNodeAction(NodeAction.None)
 }
 
 function linkParameter() {
@@ -507,19 +534,19 @@ function linkParameter() {
     state.selected_parameter = null
 }
 
-function getDisplayName(config, name) {
-    if (name === undefined) {
-        return (config.display_name !== undefined) ? config.display_name : config.name
-    } else {
-        return (config.display_name !== undefined) ? config.display_name : name
-    }
+function getNodeName(config: NodeConfig) {
+    return (config.display_name !== undefined) ? config.display_name : config.name
+}
+
+function getParameterName(config: InputConfig | OutputConfig, name: string) {
+    return (config.display_name !== undefined) ? config.display_name : name
 }
 
 function constructNodeView() {
-    const nodeCanvases = document.querySelectorAll(".node canvas, .small-node canvas")
+    const nodeCanvases = document.querySelectorAll(".node canvas, .small-node canvas") as NodeListOf<HTMLCanvasElement>
     for (const canvas of nodeCanvases) App.clearPasses(canvas)
     
-    if (state.focused_node == null) changeNodeAction(NodeAction.add)
+    if (state.focused_node == null) changeNodeAction(NodeAction.Add)
 
     const parentElement = elements.parent_node.querySelector(".small-node")
     if (parentElement != null) parentElement.remove()

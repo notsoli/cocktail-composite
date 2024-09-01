@@ -1,4 +1,28 @@
-const configs = {
+export interface NodeConfig {
+    name: string
+    display_name?: string
+    description: string
+    locals?: string[]
+    globals?: string[]
+    inputs?: {[x: string]: InputConfig}
+    outputs: {[x: string]: OutputConfig}
+    function?: string
+    inline: string
+}
+
+export interface InputConfig {
+    type: string
+    default: any
+    display_name?: string
+    display?: boolean /* mini shader preview box */
+}
+
+export interface OutputConfig {
+    type: string
+    display_name?: string
+}
+
+const configs: {[x: string]: NodeConfig} = {
     distance: {
         "name": "distance",
         "description": "outputs the distance from each pixel to a specified point (defaults to 0.5,0.5)",

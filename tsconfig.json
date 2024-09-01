@@ -1,7 +1,14 @@
 {
     "compilerOptions": {
       "target": "ESNext",
-      "outDir": "scripts"
+      "outDir": "scripts",
+      "lib": [
+        "DOM",
+        "DOM.Iterable",
+        "ESNext"
+      ],
+      "types": ["@webgpu/types"],
+      "noImplicitAny": true
     },
     "include": [
       "src/*"

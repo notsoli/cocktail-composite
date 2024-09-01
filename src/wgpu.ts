@@ -1,29 +1,50 @@
-function Pass(ctx, renderPipeline, vertexBuffer, data={}, customBindGroup=null) {
-    this.ctx = ctx
-    this.renderPipeline = renderPipeline
-    this.vertexBuffer = vertexBuffer
-    this.data = data
-    this.customBindGroup = customBindGroup
+export interface UniformValues {
+    [x: string]: number | number[]
 }
 
-function Uniform(index, size) {
-    this.index = index
-    this.values = new Float32Array(size)
-    this.buffer = device.createBuffer({
-        size: size * 4,
-        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-    })
+export class Pass {
+    ctx: GPUCanvasContext
+    renderPipeline: GPURenderPipeline
+    vertexBuffer: GPUBuffer
+    uniforms: {[x: string]: Uniform}
+    uniformValues: UniformValues
+    customBindGroup: GPUBindGroup
+
+    constructor(ctx: GPUCanvasContext, renderPipeline: GPURenderPipeline,
+                vertexBuffer: GPUBuffer, uniforms: {[x: string]: Uniform} = {},
+                customBindGroup: GPUBindGroup = null, uniformValues: UniformValues = {}) {
+        this.ctx = ctx
+        this.renderPipeline = renderPipeline
+        this.vertexBuffer = vertexBuffer
+        this.uniforms = uniforms
+        this.customBindGroup = customBindGroup
+        this.uniformValues = uniformValues
+    }
 }
 
-let device, update, defaultBindGroupLayout, pipelineLayout, bindGroup
-let passes = [], data = {}
+class Uniform {
+    index: number
+    values: Float32Array
+    buffer: GPUBuffer
+    constructor(index: number, size: number) {
+        this.index = index
+        this.values = new Float32Array(size)
+        this.buffer = device.createBuffer({
+            size: size * 4,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+        })
+    }
+}
+
+let device: GPUDevice, update: () => void, defaultBindGroupLayout: GPUBindGroupLayout, pipelineLayout: GPUPipelineLayout, bindGroup: GPUBindGroup
+let passes: Pass[] = [], uniforms: {[x: string]: Uniform} = {}
 let running = false
 
-async function init(uniforms) {
+async function init(descriptor: UniformValues) {
     if (device != undefined) device.destroy()
 
     passes = []
-    data = {}
+    uniforms = {}
 
     if (!navigator.gpu) { throw Error("WebGPU not supported.") }
     
@@ -32,10 +53,11 @@ async function init(uniforms) {
 
     device = await adapter.requestDevice()
 
-    const proxy = new Proxy(uniforms, { set: modifyUniform })
+    const proxy = new Proxy(descriptor, { set: modifyUniform })
 
-    const bindGroupLayoutEntries = [], bindGroupEntries = []
-    Object.entries(uniforms).forEach((entry, index) => {
+    const bindGroupLayoutEntries: GPUBindGroupLayoutEntry[] = []
+    const bindGroupEntries: GPUBindGroupEntry[] = []
+    Object.entries(descriptor).forEach((entry, index) => {
         const key = entry[0]
         const value = entry[1]
 
@@ -48,9 +70,10 @@ async function init(uniforms) {
             buffer: { type: 'uniform' }
         }
 
-        data[key] = new Uniform(index, size)
-        data[key].values.set(arrayForm)
-        bindGroupEntries[index] = { binding: index, resource: { buffer: data[key].buffer }}
+        const newUniform = new Uniform(index, size)
+        newUniform.values.set(arrayForm)
+        bindGroupEntries[index] = { binding: index, resource: { buffer: newUniform.buffer }}
+        uniforms[key] = newUniform
     })
 
     defaultBindGroupLayout = device.createBindGroupLayout({
@@ -66,8 +89,14 @@ async function init(uniforms) {
     return proxy
 }
 
-async function create_pass(config) {
-    const hasUniforms = (config.uniforms != undefined)
+interface PassData {
+    canvas: HTMLCanvasElement
+    fragment: string
+    uniformValues: any
+}
+
+async function create_pass(data: PassData): Promise<UniformValues> {
+    const hasUniforms = (data.uniformValues != undefined)
 
     const vertex = `
         @vertex
@@ -77,9 +106,9 @@ async function create_pass(config) {
     `
 
     const shaderModule = device.createShaderModule({
-        code: vertex + config.fragment })
+        code: vertex + data.fragment })
 
-    const ctx = config.canvas.getContext("webgpu")
+    const ctx = data.canvas.getContext("webgpu")
     ctx.configure({
         device: device,
         format: navigator.gpu.getPreferredCanvasFormat(),
@@ -102,7 +131,7 @@ async function create_pass(config) {
     })
     device.queue.writeBuffer(vertexBuffer, 0, verts, 0, verts.length)
 
-    const vertexBuffers = [
+    const vertexBuffers: GPUVertexBufferLayout[] = [
         {
             attributes: [
                 { shaderLocation: 0, offset: 0, format: "float32x2"}
@@ -113,10 +142,10 @@ async function create_pass(config) {
     ]
 
     let newPipelineLayout = pipelineLayout
-    let customBindGroup, passData = {}
+    let customBindGroup, uniforms: {[x: string]: Uniform} = {}
     if (hasUniforms) {
-        const bindGroupLayoutEntries = [], bindGroupEntries = []
-        Object.entries(config.uniforms).forEach((entry, index) => {
+        const bindGroupLayoutEntries: GPUBindGroupLayoutEntry[] = [], bindGroupEntries: GPUBindGroupEntry[] = []
+        Object.entries(data.uniformValues).forEach((entry, index) => {
             const key = entry[0]
             const value = entry[1]
 
@@ -130,7 +159,7 @@ async function create_pass(config) {
             }
 
             const newUniform = new Uniform(index, size)
-            passData[key] = newUniform
+            uniforms[key] = newUniform
             const values = newUniform.values
             values.set(arrayForm)
             bindGroupEntries[index] = { binding: index, resource: { buffer: newUniform.buffer }}
@@ -149,20 +178,23 @@ async function create_pass(config) {
     }
 
     // configure rendering pipeline
-    const pipelineDescriptor = {
-        vertex: { module: shaderModule, entryPoint: "vertex_main", buffers: vertexBuffers },
-        fragment: { module: shaderModule, entryPoint: "fragment_main",
-            targets: [{ format: navigator.gpu.getPreferredCanvasFormat() }]},
+    const vertexState: GPUVertexState = { module: shaderModule, entryPoint: "vertex_main", buffers: vertexBuffers }
+    const fragmentState: GPUFragmentState = {
+        module: shaderModule, entryPoint: "fragment_main",
+        targets: [{ format: navigator.gpu.getPreferredCanvasFormat() }]
+    }
+    const pipelineDescriptor: GPURenderPipelineDescriptor = {
+        vertex: vertexState,
+        fragment: fragmentState,
         primitive: { topology: "triangle-list" },
         layout: newPipelineLayout
     }
     const renderPipeline = device.createRenderPipeline(pipelineDescriptor)
 
-    let passProxy = null, pass
+    let passProxy: Promise<UniformValues> = null, pass: Pass
     if (hasUniforms) {
-        pass = new Pass(ctx, renderPipeline, vertexBuffer, passData, customBindGroup)
-        config.uniforms.source = pass
-        passProxy = new Proxy(config.uniforms, { set: modifyPassUniform })
+        pass = new Pass(ctx, renderPipeline, vertexBuffer, uniforms, customBindGroup, data.uniformValues)
+        passProxy = new Proxy(data.uniformValues, { set: createLocalUniformModifier(pass) })
     } else {
         pass = new Pass(ctx, renderPipeline, vertexBuffer)
     }
@@ -171,20 +203,20 @@ async function create_pass(config) {
     return passProxy
 }
 
-async function run(_update) {
+async function run(_update: () => void) {
     update = _update
 
-    Object.entries(data).forEach((entry) => {
-        const uniform = entry[1]
+    for (const key in uniforms) {
+        const uniform = uniforms[key]
         device.queue.writeBuffer(uniform.buffer, 0, uniform.values)
-    })
+    }
 
-    passes.forEach((pass) => {
-        Object.entries(pass.data).forEach((entry) => {
-            const uniform = entry[1]
+    for (const pass of passes) {
+        for (const key in pass.uniforms) {
+            const uniform = pass.uniforms[key]
             device.queue.writeBuffer(uniform.buffer, 0, uniform.values)
-        })
-    })
+        }
+    }
 
     if (!running) {
         requestAnimationFrame(render)
@@ -200,7 +232,7 @@ function render() {
         // background color
         const clearColor = { r: 0.0, g: 0.0, b: 0.0, a: 1.0 }
 
-        const renderPassDescriptor = {
+        const renderPassDescriptor: GPURenderPassDescriptor = {
             colorAttachments: [{
                 clearValue: clearColor,
                 loadOp: "clear",
@@ -226,24 +258,28 @@ function render() {
     requestAnimationFrame(render)
 }
 
-function modifyUniform(target, key, value) {
+function modifyUniform(target: UniformValues, key: string, value: number | number[]) {
     const arrayForm = Array.isArray(value) ? value : [value]
-    const values = data[key].values
+    const uniform = uniforms[key]
+    const values = uniform.values
     values.set(arrayForm)
-    device.queue.writeBuffer(data[key].buffer, 0, values)
+    device.queue.writeBuffer(uniform.buffer, 0, values)
 
     target[key] = value
-    return value
+    return true
 }
 
-function modifyPassUniform(target, key, value) {
-    const arrayForm = Array.isArray(value) ? value : [value]
-    const targetData = target.source.data[key]
-    targetData.values.set(arrayForm)
-    device.queue.writeBuffer(targetData.buffer, 0, targetData.values)
+function createLocalUniformModifier(pass: Pass) {
+    return function(target: UniformValues, key: string, value: number | number[]) {
+        const arrayForm = Array.isArray(value) ? value : [value]
+        const targetUniform = pass.uniforms[key]
 
-    target[key] = value
-    return value
+        targetUniform.values.set(arrayForm)
+        device.queue.writeBuffer(targetUniform.buffer, 0, targetUniform.values)
+
+        target[key] = value
+        return true
+    }
 }
 
 function clear_passes() {
