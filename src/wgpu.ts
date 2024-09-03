@@ -225,7 +225,6 @@ async function run(_update: () => void) {
 }
 
 function render() {
-
     passes.forEach((pass) => {
         const commandEncoder = device.createCommandEncoder()
 

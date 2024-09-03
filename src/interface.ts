@@ -564,7 +564,5 @@ function constructNodeView() {
 }
 
 // export public functions
-const Interface = {
-    init: init
-}
+const Interface = { init }
 export default Interface
