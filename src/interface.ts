@@ -294,7 +294,6 @@ function assembleParameter(nodeid: number, input_name: string, input: InputConfi
 
 // TODO: make parameter its own type that extends HTMLElement
 function updateParameter(nodeid: number, parameter: HTMLElement) {
-    console.log(parameter)
     let newValue
     switch (parameter.dataset.type) {
         case "f32":
@@ -561,6 +560,8 @@ function constructNodeView() {
     const children = elements.child_nodes.querySelectorAll(".small-node")
     for (const childElement of children) childElement.remove()
     for (const child of node.children) elements.child_nodes.appendChild(constructChildNode(child))
+
+    App.buildShaders()
 }
 
 // export public functions

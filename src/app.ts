@@ -80,15 +80,15 @@ window.onload = async () => {
  * This shader is the preview for every node under it (its children),
  * ultimately creating the full visualization (represented by the root node).
  */
-async function buildShaders(config: Config) {
+async function buildShaders(config?: Config) {
+    if (config == undefined) config = tree
+
     // make sure the graphics backend doesn't contain any shader passes, since we'll be remaking all of them
     WGPU.clear_passes()
     
-    let mainPassUniforms: UniformValues
+    let mainPassUniforms: UniformValues;
     // iterate over each pass (preview) in the config, building its fragment shader and creating a shader pass
-    for (const passID in config.passes) {
-        const passConfig = config.passes[passID]
-
+    for (const passConfig of config.passes) {
         // account for effect previews, where the id is the name of the effect rather than a numerical id
         let rootNode
         if (typeof passConfig.root_id === "string") {
@@ -172,8 +172,6 @@ function addNodeAsRoot(nodeid: number, config: NodeConfig) {
         uniforms: { res: [ window.innerWidth, window.innerHeight ] },
         return: formatOutputToColor(node.outputs[defaultOutputKey], config.outputs[defaultOutputKey])
     })
-
-    buildShaders(tree)
 }
 
 /**
@@ -237,8 +235,6 @@ function addNodeAsParent(childid: number, nodeid: number, config: NodeConfig) {
         newParentNode.children.push(childNode)
         parentNode.children.push(newParentNode)
     }
-
-    buildShaders(tree)
 }
 
 /**
@@ -252,8 +248,6 @@ function addNodeAsChild(parentid: number, nodeid: number, config: NodeConfig) {
     const childNode = formatNodeConfig(nodeid, config)
     const parentNode = findNodeByID(parentid)
     parentNode.children.push(childNode)
-
-    buildShaders(tree)
 }
 
 /**
@@ -379,8 +373,6 @@ function addNodePass(nodeid: number, canvas: HTMLCanvasElement) {
         uniforms: { res: [ canvas.width, canvas.height ] },
         return: formatOutputToColor(node.outputs[defaultOutputKey], config.outputs[defaultOutputKey])
     })
-
-    buildShaders(tree)
 }
 
 /**
@@ -406,6 +398,7 @@ function clearPasses(canvas: HTMLCanvasElement) {
 function updateParameter(nodeid: number, parameter: string, value: any) {
     const node = findNodeByID(nodeid)
     node.inputs[parameter] = value
+
     buildShaders(tree)
 }
 
@@ -420,7 +413,8 @@ const App = {
     clearPasses,
     findNodeByID,
     findParentByID,
-    updateParameter
+    updateParameter,
+    buildShaders
 }
 
 export default App
