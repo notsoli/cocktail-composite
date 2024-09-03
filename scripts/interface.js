@@ -21,6 +21,7 @@ const state = {
 }
 
 const elements = {}
+const links = []
 
 async function init() {
     // query elements
@@ -43,6 +44,11 @@ async function init() {
     elements.child_nodes = document.querySelector("#child-nodes")
 
     elements.templates = document.querySelector("#element-templates")
+
+    elements.node_links = document.querySelector("#node-links")
+    elements.node_links.width = window.innerWidth * window.devicePixelRatio
+    elements.node_links.height = window.innerHeight * window.devicePixelRatio
+    elements.links_ctx = elements.node_links.getContext("2d")
 
     // set current state
     changeView(View.node)
@@ -238,13 +244,13 @@ function assembleParameter(node, input_name, input) {
     let newParameter
     if (input.display) {
         newParameter = elements.parameter_templates.querySelector(".display").cloneNode(true)
+
         const canvas = newParameter.querySelector("canvas")
         canvas.width = 50
         canvas.height = 50
+
         const nodeInput = node.inputs[input_name]
-        if (nodeInput.linked != null) {
-            App.addNodePass(nodeInput.linked, canvas)
-        }
+        if (nodeInput.linked != null) App.addNodePass(nodeInput.linked, canvas)
     } else {
         newParameter = elements.parameter_templates.querySelector(`.${input.type}`).cloneNode(true)
         switch (input.type) {
@@ -435,6 +441,7 @@ function constructChildNode(node) {
 function focusNode(nodeid) {
     state.focused_node = nodeid
     constructNodeView()
+    constructLinks()
 }
 
 function selectParameter() {
@@ -467,7 +474,8 @@ function selectParameter() {
     state.selected_parameter = {
         node: node.dataset.nodeid,
         name: this.dataset.name,
-        type: this.dataset.type
+        type: this.dataset.type,
+        connector: this
     }
 }
 
@@ -511,6 +519,17 @@ function linkParameter() {
     const connectors = document.querySelectorAll(".node-connector")
     for (const connector of connectors) connector.classList.remove("active-connector")
 
+    const parentConnector = (this.classList.contains("node-connector"))
+        ? this : this.querySelector(".node-connector")
+
+    links.push({
+        childID: parseInt(state.selected_parameter.node),
+        childParameter: state.selected_parameter.name,
+        parentID: parseInt(node.dataset.nodeid),
+        parentParameter: this.dataset.name,
+    })
+    constructLinks()
+
     state.selected_parameter = null
 }
 
@@ -541,6 +560,29 @@ function constructNodeView() {
     const children = elements.child_nodes.querySelectorAll(".small-node")
     for (const childElement of children) childElement.remove()
     for (const child of node.children) elements.child_nodes.appendChild(constructChildNode(child))
+}
+
+function constructLinks() {
+    elements.links_ctx.clearRect(0, 0, elements.node_links.width, elements.node_links.height);
+    const dpr = window.devicePixelRatio
+    elements.links_ctx.lineWidth = 5 * dpr
+    elements.links_ctx.strokeStyle = "#e0772d"
+    for (const link of links) {
+        const childConnector = findConnector(link.childID, link.childParameter).getBoundingClientRect()
+        const parentConnector = findConnector(link.parentID, link.parentParameter).getBoundingClientRect()
+
+        elements.links_ctx.beginPath()
+        elements.links_ctx.moveTo((childConnector.x + 8) * dpr, (childConnector.y + 8) * dpr)
+        elements.links_ctx.lineTo((parentConnector.x + 8) * dpr, (parentConnector.y + 8) * dpr)
+        elements.links_ctx.stroke()
+    }
+}
+
+function findConnector(nodeid, parameter) {
+    const nodeElement = document.querySelector(`[data-nodeid="${nodeid}"]`)
+    const parameterElement = nodeElement.querySelector(`[data-name="${parameter}"]`)
+    if (parameterElement.classList.contains("node-connector")) return parameterElement
+    else return parameterElement.querySelector(".node-connector")
 }
 
 // export public functions

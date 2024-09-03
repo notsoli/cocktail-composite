@@ -56,7 +56,7 @@ const configs = {
                 "type": "f32"
             }
         },
-        "inline": "let $o{flattened_value} = smoothstep($i{cutoff}, $i{cutoff} + 0.01, $i{value});"
+        "inline": "let $o{flattened_value} = step($i{cutoff}, $i{value});"
     },
     grid: {
         "name": "grid",

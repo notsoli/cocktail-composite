@@ -6,7 +6,7 @@ import { default as configs } from './configs.js'
 const tree = {
     root: {},
     effect_nodes: {},
-    passes: []
+    passes: [],
 }
 
 const canvases = {
@@ -290,7 +290,7 @@ function clearPasses(canvas) {
 
 function updateParameter(nodeid, parameter, value) {
     const node = findNodeByID(nodeid)
-    node.inputs[parameter] = value
+    node.inputs[parameter].value = value
     buildShaders(tree)
 }
 
