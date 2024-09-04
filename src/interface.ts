@@ -1,6 +1,5 @@
 import { default as App } from './app.js'
-import { Node } from './app.js'
-import { InputConfig, NodeConfig, OutputConfig } from './configs.js'
+import { Node, Input, LinkedInput, Output, LinkedOutput } from './app.js'
 
 enum View {
     Node,
@@ -154,7 +153,8 @@ async function populateToolkit() {
         const config = App.configs[configName]
         const newEffect = template.cloneNode(true) as HTMLElement
 
-        newEffect.querySelector("h3").innerText = getNodeName(config)
+        const name = (config.display_name !== undefined) ? config.display_name : config.name
+        newEffect.querySelector("h3").innerText = name
         newEffect.querySelector(".tooltip").innerHTML = config.description
         const canvas = newEffect.querySelector("canvas")
         canvas.width = 100
@@ -191,7 +191,7 @@ function addFocusNode() {
     }
 
     const config = App.configs[state.selected_effect]
-    if (config === undefined) {
+    if (config === undefined) { // not sure if i need this check
         console.error(`Congfiguration for effect ${state.selected_effect} does not exist`)
         return
     }
@@ -209,16 +209,14 @@ function constructFocusNode(node: Node) {
     const nodeTemplate = elements.templates.querySelector(".node")
     const newNode = nodeTemplate.cloneNode(true) as HTMLElement
 
-    const config = App.configs[node.name]
-
     newNode.dataset.nodeid = node.id.toString()
-    newNode.dataset.name = config.name
-    newNode.querySelector(".node-header>h2").innerHTML = getNodeName(config)
+    newNode.dataset.name = node.name
+    newNode.querySelector(".node-header>h2").innerHTML = node.display_name
 
     const nodeParameters = newNode.querySelector(".node-parameters")
-    if (config.inputs !== undefined) {
-        for (const input_name in config.inputs) {
-            const input = config.inputs[input_name]
+    if (node.inputs !== undefined) {
+        for (const input_name in node.inputs) {
+            const input = node.inputs[input_name]
             const newParameter = assembleParameter(node.id, input_name, input)
             if (newParameter == null) continue
             nodeParameters.appendChild(newParameter)
@@ -226,8 +224,8 @@ function constructFocusNode(node: Node) {
     } else nodeParameters.remove()
 
     const nodeConnectors = newNode.querySelector(".node-connectors")
-    for (const output_name in config.outputs) {
-        const output = config.outputs[output_name]
+    for (const output_name in node.outputs) {
+        const output = node.outputs[output_name]
         const nodeConnector = elements.templates.querySelector(".node-connector").cloneNode(true) as HTMLElement
         nodeConnector.dataset.name = output_name
         nodeConnector.dataset.type = output.type
@@ -251,7 +249,7 @@ function constructFocusNode(node: Node) {
     return newNode
 }
 
-function assembleParameter(nodeid: number, input_name: string, input: InputConfig) {
+function assembleParameter(nodeid: number, input_name: string, input: Input | LinkedInput) {
     let newParameter: HTMLElement
     if (input.display) {
         newParameter = elements.parameter_templates.querySelector(".display").cloneNode(true) as HTMLElement
@@ -259,10 +257,10 @@ function assembleParameter(nodeid: number, input_name: string, input: InputConfi
         newParameter = elements.parameter_templates.querySelector(`.${input.type}`).cloneNode(true) as HTMLElement
         switch (input.type) {
             case "f32":
-                newParameter.querySelector("input").value = input.default
+                newParameter.querySelector("input").value = input.value
                 break
             case "vec2f":
-                const csv = input.default.match(/(?<=vec2\()(.*)(?=\))/)[0]
+                const csv = input.value.match(/(?<=vec2\()(.*)(?=\))/)[0]
                 const values = csv.split(", ")
 
                 const xInput = newParameter.querySelector(".x-input") as HTMLInputElement
@@ -278,7 +276,7 @@ function assembleParameter(nodeid: number, input_name: string, input: InputConfi
         return null
     }
 
-    newParameter.querySelector("p").innerText = getParameterName(input, input_name)
+    newParameter.querySelector("p").innerText = input.display_name
     newParameter.dataset.name = input_name
     newParameter.dataset.type = input.type
 
@@ -381,11 +379,9 @@ function constructParentNode(node: Node) {
     const smallNodeTemplate = elements.templates.querySelector(".small-node.parent-node")
     const newNode = smallNodeTemplate.cloneNode(true) as HTMLElement
 
-    const config = App.configs[node.name]
-
     const nodeConnectors = newNode.querySelector(".node-connectors")
-    for (const input_name in config.inputs) {
-        const input = config.inputs[input_name]
+    for (const input_name in node.inputs) {
+        const input = node.inputs[input_name]
         const nodeConnector = elements.templates.querySelector(".node-connector").cloneNode(true) as HTMLElement
         nodeConnector.dataset.name = input_name
         nodeConnector.dataset.type = input.type
@@ -395,8 +391,8 @@ function constructParentNode(node: Node) {
     }
 
     newNode.dataset.nodeid = node.id.toString()
-    newNode.dataset.name = config.name
-    newNode.querySelector(".node-header>h2").innerHTML = getNodeName(config)
+    newNode.dataset.name = node.name
+    newNode.querySelector(".node-header>h2").innerHTML = node.display_name
 
     const canvas = newNode.querySelector("canvas")
     canvas.width = 125
@@ -418,11 +414,9 @@ function constructChildNode(node: Node) {
     const smallNodeTemplate = elements.templates.querySelector(".small-node.child-node")
     const newNode = smallNodeTemplate.cloneNode(true) as HTMLElement
 
-    const config = App.configs[node.name]
-
     const nodeConnectors = newNode.querySelector(".node-connectors")
-    for (const output_name in config.outputs) {
-        const output = config.outputs[output_name]
+    for (const output_name in node.outputs) {
+        const output = node.outputs[output_name]
         const nodeConnector = elements.templates.querySelector(".node-connector").cloneNode(true) as HTMLElement
         nodeConnector.dataset.name = output_name
         nodeConnector.dataset.type = output.type
@@ -432,8 +426,8 @@ function constructChildNode(node: Node) {
     }
 
     newNode.dataset.nodeid = node.id.toString()
-    newNode.dataset.name = config.name
-    newNode.querySelector(".node-header>h2").innerHTML = getNodeName(config)
+    newNode.dataset.name = node.name
+    newNode.querySelector(".node-header>h2").innerHTML = node.display_name
 
     const canvas = newNode.querySelector("canvas")
     canvas.width = 125
@@ -531,14 +525,6 @@ function linkParameter() {
     for (const connector of connectors) connector.classList.remove("active-connector")
 
     state.selected_parameter = null
-}
-
-function getNodeName(config: NodeConfig) {
-    return (config.display_name !== undefined) ? config.display_name : config.name
-}
-
-function getParameterName(config: InputConfig | OutputConfig, name: string) {
-    return (config.display_name !== undefined) ? config.display_name : name
 }
 
 function constructNodeView() {

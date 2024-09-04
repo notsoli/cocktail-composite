@@ -4,7 +4,7 @@ import { default as Interface } from './interface.js'
 import { default as configs } from './configs.js'
 
 import { UniformValues } from './wgpu.js'
-import { NodeConfig, OutputConfig } from './configs.js'
+import { NodeConfig, Type } from './configs.js'
 
 export interface Config {
     root: Node
@@ -23,16 +23,66 @@ class PassConfig {
 export class Node {
     id: number
     name: string
-    inputs: {[x: string]: any}
-    outputs: {[x: string]: string}
+    display_name: string
+    inputs: {[x: string]: Input | LinkedInput}
+    outputs: {[x: string]: Output | LinkedOutput}
     children: Node[]
 
-    constructor(id:number, name: string, inputs: {[x: string]: any}, outputs: {[x: string]: string}) {
+    constructor(id:number, name: string, display_name: string,
+        inputs: {[x: string]: Input | LinkedInput},
+        outputs: {[x: string]: Output | LinkedOutput}) {
         this.id = id
         this.name = name
+        this.display_name = (display_name === undefined) ? name : display_name
         this.inputs = inputs
         this.outputs = outputs
         this.children = []
+    }
+}
+
+export class Input {
+    type: Type
+    value: any
+    display_name: string
+    display: boolean
+
+    constructor(type: Type, value: any, display_name: string, display: boolean) {
+        this.type = type
+        this.value = value
+        this.display_name = display_name
+        this.display = display
+    }
+}
+
+export class LinkedInput extends Input {
+    id: number
+    parameter: string
+    constructor(type: Type, value: any, display_name: string, display: boolean, id: number, parameter: string) {
+        super(type, value, display_name, display)
+        this.id = id
+        this.parameter = parameter
+    }
+}
+
+export class Output {
+    type: Type
+    text: string
+    display_name: string
+
+    constructor(type: Type, text: string, display_name: string) {
+        this.type = type
+        this.text = text
+        this.display_name = display_name
+    }
+}
+
+export class LinkedOutput extends Output {
+    id: number
+    parameter: string
+    constructor(type: Type, text: string, display_name: string, id: number, parameter: string) {
+        super(type, text, display_name)
+        this.id = id
+        this.parameter = parameter
     }
 }
 
@@ -170,7 +220,7 @@ function addNodeAsRoot(nodeid: number, config: NodeConfig) {
         root_id: nodeid,
         canvas: canvases.main_canvas,
         uniforms: { res: [ window.innerWidth, window.innerHeight ] },
-        return: formatOutputToColor(node.outputs[defaultOutputKey], config.outputs[defaultOutputKey])
+        return: formatOutputToColor(node.outputs[defaultOutputKey])
     })
 }
 
@@ -195,7 +245,7 @@ function generateEffectPreviews() {
             root_id: config_name,
             canvas: canvas,
             uniforms: { res: [ canvas.width, canvas.height ] },
-            return: formatOutputToColor(node.outputs[defaultOutputKey], config.outputs[defaultOutputKey])
+            return: formatOutputToColor(node.outputs[defaultOutputKey])
         })
     }
 }
@@ -259,41 +309,45 @@ function addNodeAsChild(parentid: number, nodeid: number, config: NodeConfig) {
  * @returns The new node
  */
 function formatNodeConfig(nodeid: number, config: NodeConfig) {
-    const inputs: {[x: string]: any} = {}
+    const inputs: {[x: string]: Input} = {}
     if (config.inputs !== undefined) {
-        for (const input_name in config.inputs)
-            inputs[input_name] = config.inputs[input_name].default
+        for (const input_name in config.inputs) {
+            const input_config = config.inputs[input_name]
+            const name = (input_config.display_name) ? input_config.display_name : input_name
+            const display = (input_config.display) ? input_config.display : false
+            inputs[input_name] = new Input(input_config.type, input_config.default, name, display)
+        }
     }
 
-    const outputs: {[x: string]: string} = {}
-    for (const output_name in config.outputs)
-        outputs[output_name] = `${output_name}_${nodeid}`
+    const outputs: {[x: string]: Output} = {}
+    for (const output_name in config.outputs) {
+        const output_config = config.outputs[output_name]
+        const name = (output_config.display_name) ? output_config.display_name : output_name
+        outputs[output_name] = new Output(output_config.type, `${output_name}_${nodeid}`, name)
+    }
 
-    const newNode = new Node(nodeid, config.name, inputs, outputs)
+    const newNode = new Node(nodeid, config.name, config.display_name, inputs, outputs)
 
     return newNode
 }
 
 /**
- * Transforms a specified type (fe2, vec2f, vec3f, and vec4f)
+ * Transforms a specified type (f32, vec2f, vec3f, and vec4f)
  * into one that can be displayed as an output color (`vec4`).
  * 
- * @param outputName The name of the variable to output
- * @param outputConfig Information about the output variable
+ * @param output The output to convert
  * @returns A string representing a `vec4` that can be used as an output color
  */
-function formatOutputToColor(outputName: string, outputConfig: OutputConfig) {
-    switch (outputConfig.type) {
+function formatOutputToColor(output: Output) {
+    switch (output.type) {
         case "f32":
-            return `vec4(vec3(${outputName}), 1.)`
+            return `vec4(vec3(${output.text}), 1.)`
         case "vec2f":
-            return `vec4(${outputName}, 0., 1.)`
+            return `vec4(${output.text}, 0., 1.)`
         case "vec3f":
-            return `vec4(${outputName}, 1.)`
+            return `vec4(${output.text}, 1.)`
         case "vec4f":
-            return outputName
-        default:
-            console.error("Unsupported return type!")
+            return output.text
     }
 }
 
@@ -346,8 +400,14 @@ function linkParameter(childID: number, childParameter: string, parentID: number
     const childNode = findNodeByID(childID)
     const parentNode = findNodeByID(parentID)
 
-    const childParameterName = childNode.outputs[childParameter]
-    parentNode.inputs[parentParameter] = childParameterName
+    const childOutput = childNode.outputs[childParameter]
+    const parentInput = parentNode.inputs[parentParameter]
+    childNode.outputs[childParameter] = new LinkedOutput(childOutput.type, childOutput.text,
+        childOutput.display_name, parentID, parentParameter)
+    console.log(new LinkedInput(parentInput.type, childOutput.text,
+        childOutput.display_name, parentInput.display, childID, childParameter))
+    parentNode.inputs[parentParameter] = new LinkedInput(parentInput.type, childOutput.text,
+        childOutput.display_name, parentInput.display, childID, childParameter)
 
     buildShaders(tree)
 }
@@ -371,7 +431,7 @@ function addNodePass(nodeid: number, canvas: HTMLCanvasElement) {
         root_id: nodeid,
         canvas: canvas,
         uniforms: { res: [ canvas.width, canvas.height ] },
-        return: formatOutputToColor(node.outputs[defaultOutputKey], config.outputs[defaultOutputKey])
+        return: formatOutputToColor(node.outputs[defaultOutputKey])
     })
 }
 
@@ -397,7 +457,7 @@ function clearPasses(canvas: HTMLCanvasElement) {
  */
 function updateParameter(nodeid: number, parameter: string, value: any) {
     const node = findNodeByID(nodeid)
-    node.inputs[parameter] = value
+    node.inputs[parameter].value = value
 
     buildShaders(tree)
 }

@@ -1,13 +1,13 @@
 import { default as App } from './app.js'
 
 import { Node, Config } from './app.js'
-import { NodeConfig } from './configs.js'
+import { NodeConfig, Type } from './configs.js'
 
-const localTypes: {[x: string]: string} = {
+const localTypes: {[x: string]: Type} = {
     'res': 'vec2f'
 }
 
-const globalTypes: {[x: string]: string} = {
+const globalTypes: {[x: string]: Type} = {
     'frame': 'f32'
 }
 
@@ -94,20 +94,18 @@ function formatInlineIO(expression: string, node: Node, config: NodeConfig) {
 
     if (config.inputs !== undefined) {
         for (const input_name in config.inputs) {
-            const input_config = config.inputs[input_name]
-            const value = (node.inputs[input_name] !== undefined)
-                ? node.inputs[input_name] : input_config.default
+            const input = node.inputs[input_name]
             const keyString = "$i{" + input_name + "}"
             while (inline.includes(keyString))
-                inline = inline.replace("$i{" + input_name + "}", value)
+                inline = inline.replace("$i{" + input_name + "}", input.value)
         }
     }
 
     for (const output_name in config.outputs) {
-        const value = node.outputs[output_name] // if undefined, panic!!!!
+        const output = node.outputs[output_name] // if undefined, panic!!!!
         const keyString = "$o{" + output_name + "}"
         while(inline.includes(keyString))
-            inline = inline.replace(keyString, value)
+            inline = inline.replace(keyString, output.text)
     }
 
     return inline

@@ -1,3 +1,5 @@
+export type Type = "f32" | "vec2f" | "vec3f" | "vec4f"
+
 export interface NodeConfig {
     name: string
     display_name?: string
@@ -10,15 +12,15 @@ export interface NodeConfig {
     inline: string
 }
 
-export interface InputConfig {
-    type: string
+interface InputConfig {
+    type: Type
     default: any
     display_name?: string
     display?: boolean /* mini shader preview box */
 }
 
-export interface OutputConfig {
-    type: string
+interface OutputConfig {
+    type: Type
     display_name?: string
 }
 
