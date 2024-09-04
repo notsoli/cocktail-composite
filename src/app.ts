@@ -404,8 +404,6 @@ function linkParameter(childID: number, childParameter: string, parentID: number
     const parentInput = parentNode.inputs[parentParameter]
     childNode.outputs[childParameter] = new LinkedOutput(childOutput.type, childOutput.text,
         childOutput.display_name, parentID, parentParameter)
-    console.log(new LinkedInput(parentInput.type, childOutput.text,
-        childOutput.display_name, parentInput.display, childID, childParameter))
     parentNode.inputs[parentParameter] = new LinkedInput(parentInput.type, childOutput.text,
         childOutput.display_name, parentInput.display, childID, childParameter)
 
