@@ -143,10 +143,10 @@ function constructChildNode(node: Node) {
 function assembleParameter(nodeid: number, input_name: string, input: Input | LinkedInput) {
     let newParameter: HTMLElement
 
-    if (input.display) {
-        newParameter = elements.parameter_templates.querySelector(".display").cloneNode(true) as HTMLElement
-    } else if (input instanceof LinkedInput) {
+    if (input instanceof LinkedInput) {
         newParameter = elements.parameter_templates.querySelector(".linked").cloneNode(true) as HTMLElement
+    } else if (input.display) {
+        newParameter = elements.parameter_templates.querySelector(".display").cloneNode(true) as HTMLElement
     } else {
         newParameter = elements.parameter_templates.querySelector(`.${input.type}`).cloneNode(true) as HTMLElement
         switch (input.type) {
@@ -194,7 +194,7 @@ function constructNodeView() {
     const parentElement = elements.parent_node.querySelector(".small-node")
     if (parentElement != null) parentElement.remove()
     const parent = App.findParentByID(state.focused_node)
-    if (parent != null) elements.parent_node.appendChild(constructParentNode(parent))
+    if (parent != null) elements.parent_node.insertBefore(constructParentNode(parent), elements.parent_placeholder_node)
 
     const node = App.findNodeByID(state.focused_node)
     const focusElement = elements.focus_node.querySelector(".node")
@@ -203,7 +203,7 @@ function constructNodeView() {
 
     const children = elements.child_nodes.querySelectorAll(".small-node")
     for (const childElement of children) childElement.remove()
-    for (const child of node.children) elements.child_nodes.appendChild(constructChildNode(child))
+    for (const child of node.children) elements.child_nodes.insertBefore(constructChildNode(child), elements.child_placeholder_node)
 
     App.buildShaders()
 }
