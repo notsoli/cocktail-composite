@@ -347,6 +347,7 @@ function linkParameter() {
     for (const connector of connectors) connector.classList.remove("active-connector")
 
     state.selected_parameter = null
+    Builder.constructNodeView() // this can be more efficient
 }
 
 // export public functions

@@ -253,6 +253,11 @@
     padding: 0 var(--small-gap);
 }
 
+.linked-parameter-indicator {
+    color: var(--placeholder);
+    margin: auto;
+}
+
 .parameter.active-parameter {
     cursor: pointer;
 }

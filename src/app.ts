@@ -406,8 +406,6 @@ function linkParameter(childID: number, childParameter: string, parentID: number
         childOutput.display_name, parentID, parentParameter)
     parentNode.inputs[parentParameter] = new LinkedInput(parentInput.type, childOutput.text,
         childOutput.display_name, parentInput.display, childID, childParameter)
-
-    buildShaders(tree)
 }
 
 /**

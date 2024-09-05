@@ -142,8 +142,11 @@ function constructChildNode(node: Node) {
 
 function assembleParameter(nodeid: number, input_name: string, input: Input | LinkedInput) {
     let newParameter: HTMLElement
+
     if (input.display) {
         newParameter = elements.parameter_templates.querySelector(".display").cloneNode(true) as HTMLElement
+    } else if (input instanceof LinkedInput) {
+        newParameter = elements.parameter_templates.querySelector(".linked").cloneNode(true) as HTMLElement
     } else {
         newParameter = elements.parameter_templates.querySelector(`.${input.type}`).cloneNode(true) as HTMLElement
         switch (input.type) {
@@ -167,7 +170,8 @@ function assembleParameter(nodeid: number, input_name: string, input: Input | Li
         return null
     }
 
-    newParameter.querySelector("p").innerText = input.display_name
+    const parameterName: HTMLElement = newParameter.querySelector("p.parameter-name")
+    parameterName.innerText = input.display_name
     newParameter.dataset.name = input_name
     newParameter.dataset.type = input.type
 
