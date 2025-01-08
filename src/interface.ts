@@ -350,6 +350,15 @@ function linkParameter() {
     Builder.constructNodeView() // this can be more efficient
 }
 
+function removeNode(node: HTMLElement) {
+    const nodeid = parseInt(node.dataset.nodeid)
+    const result = App.removeNode(nodeid)
+    if (result.success === true) {
+        state.focused_node = result.newFocusID
+        Builder.constructNodeView()
+    }
+}
+
 // export public functions
 const Interface = {
     init,
@@ -357,6 +366,7 @@ const Interface = {
     linkParameter,
     focusNode,
     updateParameter,
-    changeNodeAction
+    changeNodeAction,
+    removeNode
 }
 export default Interface

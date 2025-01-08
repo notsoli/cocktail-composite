@@ -211,13 +211,17 @@ async function populateConfigs(effects: string[]) {
  */
 function addNodeAsRoot(nodeid: number, config: NodeConfig) {
     const node = formatNodeConfig(nodeid, config)
+    replaceRootNode(node)
+}
+
+function replaceRootNode(node: Node) {
     tree.root = node
 
     // makes the first output what will be displayed as the full visualization
     const defaultOutputKey = Object.keys(node.outputs)[0]
 
     tree.passes.push({
-        root_id: nodeid,
+        root_id: node.id,
         canvas: canvases.main_canvas,
         uniforms: { res: [ window.innerWidth, window.innerHeight ] },
         return: formatOutputToColor(node.outputs[defaultOutputKey])
@@ -458,6 +462,42 @@ function updateParameter(nodeid: number, parameter: string, value: any) {
     buildShaders(tree)
 }
 
+interface removeNodeResult {
+    success: boolean
+    newFocusID: number | null
+}
+
+function removeNode(nodeid: number): removeNodeResult {
+    const node = findNodeByID(nodeid)
+    const parent = findParentByID(nodeid)
+
+    // handle deletion of root node
+    if (parent === null) {
+        // delete will fail if the node has multiple children.
+        if (node.children.length > 1) {
+            // TODO: replace this with something better at some point
+            window.alert("Error: Cannot remove root element with multiple children.")
+            return { success: false, newFocusID: null }
+        } else if (node.children.length === 0) {
+            tree.root = null
+            clearPasses(canvases.main_canvas)
+            return { success: true, newFocusID: null}
+        } else {
+            const child = node.children[0]
+
+            // remake visualizer pass
+            tree.passes = tree.passes.filter((pass) => pass.root_id != nodeid)
+            replaceRootNode(child)
+            return { success: true, newFocusID: child.id }
+        }
+    }
+
+    // move node children
+    console.log(node)
+
+    return { success: false, newFocusID: null }
+}
+
 const App = {
     configs,
     current_nodeid: 0,
@@ -470,7 +510,8 @@ const App = {
     findNodeByID,
     findParentByID,
     updateParameter,
-    buildShaders
+    buildShaders,
+    removeNode
 }
 
 export default App

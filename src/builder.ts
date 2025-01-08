@@ -56,11 +56,7 @@ function constructFocusNode(node: Node) {
     }
 
     const removeButton = newNode.querySelector(".remove-node-button") as HTMLElement
-    removeButton.onclick = () => {
-        // newNode.remove()
-        // state.focused_node = null
-        // changeNodeAction(NodeAction.add)
-    }
+    removeButton.onclick = () => { Interface.removeNode(newNode) }
 
     const canvas = newNode.querySelector("canvas")
     canvas.width = 175
@@ -186,24 +182,34 @@ function assembleParameter(nodeid: number, input_name: string, input: Input | Li
 }
 
 function constructNodeView() {
+    // remove all passes that depend on existing canvases
     const nodeCanvases = document.querySelectorAll(".node canvas, .small-node canvas") as NodeListOf<HTMLCanvasElement>
     for (const canvas of nodeCanvases) App.clearPasses(canvas)
-    
-    if (state.focused_node == null) Interface.changeNodeAction(NodeAction.Add)
 
+    // remove all node elements
     const parentElement = elements.parent_node.querySelector(".small-node")
     if (parentElement != null) parentElement.remove()
-    const parent = App.findParentByID(state.focused_node)
-    if (parent != null) elements.parent_node.insertBefore(constructParentNode(parent), elements.parent_placeholder_node)
 
-    const node = App.findNodeByID(state.focused_node)
     const focusElement = elements.focus_node.querySelector(".node")
     if (focusElement != null) focusElement.remove()
-    elements.focus_node.appendChild(constructFocusNode(node))
 
     const children = elements.child_nodes.querySelectorAll(".small-node")
     for (const childElement of children) childElement.remove()
-    for (const child of node.children) elements.child_nodes.insertBefore(constructChildNode(child), elements.child_placeholder_node)
+    
+    // check if no node is focused (i.e. if the only node was deleted)
+    if (state.focused_node == null) {
+        Interface.changeNodeAction(NodeAction.Add)
+    } else {
+        const parentElement = elements.parent_node.querySelector(".small-node")
+        if (parentElement != null) parentElement.remove()
+        const parent = App.findParentByID(state.focused_node)
+        if (parent != null) elements.parent_node.insertBefore(constructParentNode(parent), elements.parent_placeholder_node)
+    
+        const node = App.findNodeByID(state.focused_node)
+        elements.focus_node.appendChild(constructFocusNode(node))
+    
+        for (const child of node.children) elements.child_nodes.insertBefore(constructChildNode(child), elements.child_placeholder_node)
+    }
 
     App.buildShaders()
 }
