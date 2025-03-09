@@ -1,23 +1,23 @@
 {
   "name": "cocktail-composite",
-  "version": "1.0.0",
-  "description": "A tree-based shader compositing tool.",
-  "main": "index.html",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/notsoli/cocktail-composite.git"
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.0.3",
+    "@tsconfig/svelte": "^5.0.4",
+    "svelte": "^5.20.2",
+    "svelte-check": "^4.1.4",
+    "typescript": "~5.7.2",
+    "vite": "^6.2.0"
   },
-  "author": "notsoli",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/notsoli/cocktail-composite/issues"
-  },
-  "homepage": "https://github.com/notsoli/cocktail-composite#readme",
   "dependencies": {
-    "@webgpu/types": "^0.1.44",
-    "typescript": "^5.5.4"
+    "devolute": "^1.0.1"
   }
 }

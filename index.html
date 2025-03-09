@@ -1,111 +1,13 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <script type="module" src="scripts/app.js"></script>
-        <link rel="stylesheet" href="styles/reset.css" />
-        <link rel="stylesheet" href="styles/style.css" />
-        <link rel="stylesheet" href="styles/interface.css" />
-        <title>Cocktail Composite</title>
-    </head>
-    <body>
-        <div id="persistent-interface">
-            <div id="node-view">
-                <div id="node-header">
-                    <h2 id="standalone-title">COCKTAIL COMPOSITE</h2>
-                    <div id="top-nav">
-                        <button id="visualize-button" class="top-nav-button">visualize</button>
-                        <h2 id="inline-title">COCKTAIL COMPOSITE</h2>
-                        <button id="tree-button" class="top-nav-button">T</button>
-                        <button id="variables-button" class="top-nav-button">V</button>
-                    </div>
-                </div>
-                <div id="nodes">
-                    <div id="parent-node">
-                        <div class="placeholder-node">+</div>
-                    </div>
-                    <div id="focus-node">
-                        <div class="placeholder-node">+</div>
-                    </div>
-                    <div id="child-nodes">
-                        <div class="placeholder-node">+</div>
-                    </div>
-                </div>
-            </div>
-            <div id="effect-view">
-                <h2>effect toolkit</h2>
-                <div id="effects"></div>
-            </div>
-        </div>
-        <div id="visualizer-view">
-            <div id="visualizer-interface">
-                <button id="exit-visualizer-button" class="visualizer-button"><</button>
-            </div>
-            <canvas id="visualizer-canvas"></canvas>
-        </div>
-        <div id="element-templates">
-            <div class="effect" draggable="true">
-                <h3></h3>
-                <div class="tooltip"></div>
-                <canvas></canvas>
-            </div>
-            <div class="node">
-                <div class="node-connectors"></div>
-                <div class="node-header">
-                    <button class="remove-node-button">X</button>
-                    <h2>node title</h2>
-                    <button class="edit-node-button">E</button>
-                </div>
-                <canvas></canvas>
-                <div class="node-parameters">
-                </div>
-            </div>
-            <div class="small-node child-node">
-                <div class="node-connectors"></div>
-                <div class="node-header">
-                    <button class="remove-node-button">X</button>
-                    <h2>node title</h2>
-                    <button class="edit-node-button">E</button>
-                </div>
-                <canvas></canvas>
-            </div>
-            <div class="small-node parent-node">
-                <div class="node-header">
-                    <button class="remove-node-button">X</button>
-                    <h2>node title</h2>
-                    <button class="edit-node-button">E</button>
-                </div>
-                <canvas></canvas>
-                <div class="node-connectors"></div>
-            </div>
-            <div class="node-parameters">
-                <div class="parameter linked">
-                    <p class="parameter-name">linked</p>
-                    <p class="linked-parameter-indicator">[linked]</p>
-                    <div class="node-connector"></div>
-                </div>
-                <div class="parameter display">
-                    <p class="parameter-name">display</p>
-                    <canvas></canvas>
-                    <div class="node-connector"></div>
-                </div>
-                <div class="parameter f32">
-                    <p class="parameter-name">f32</p>
-                    <input type="text">
-                    <div class="node-connector"></div>
-                </div>
-                <div class="parameter vec2f">
-                    <p class="parameter-name">point</p>
-                    <div class="input-group">
-                        <input type="text" class="x-input">
-                        <span>,</span>
-                        <input type="text" class="y-input">
-                    </div>
-                    <div class="node-connector"></div>
-                </div>
-            </div>
-            <div class="node-connector"></div>
-        </div>
-    </body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cocktail Composite</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>

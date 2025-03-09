@@ -5,7 +5,7 @@
     "locals": [ "res" ],
     "outputs": {
         "position": {
-            "type": "vec2f"
+            "data_type": "vec2f"
         }
     },
     "function": "fn normalized_position(pos : vec4f, res : vec2f) -> vec2f { return pos.xy / res; }",

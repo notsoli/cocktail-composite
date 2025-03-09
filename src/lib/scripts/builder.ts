@@ -1,7 +1,5 @@
-import { default as App } from './app.js'
-
-import { Node, Config } from './app.js'
-import { NodeConfig, Type } from './configs.js'
+import type { Node, Input } from './tree.svelte'
+import type { NodeConfig, Type } from './config'
 
 const localTypes: {[x: string]: Type} = {
     'res': 'vec2f'
@@ -11,13 +9,13 @@ const globalTypes: {[x: string]: Type} = {
     'frame': 'f32'
 }
 
-async function build(config: Config) {
-    // translate node names into their actual config objects
-    const configs = App.configs
+export function build(root: Node, returnValue: string, configs: {[x: string]: NodeConfig}) {
+    // make sure root node exists
+    if (root === null) return;
 
     // assemble local and global uniform lists
-    const localUniforms = assembleUniformList(config.root, "locals", configs)
-    const globalUniforms = assembleUniformList(config.root, "globals", configs)
+    const localUniforms = assembleUniformList(root, "locals", configs)
+    const globalUniforms = assembleUniformList(root, "globals", configs)
 
     // begin assembling shader, insert required uniforms
     let shader = ""
@@ -36,7 +34,7 @@ async function build(config: Config) {
 
     // insert needed functions
     for (const config in configs) {
-        const configFunction = configs[config].function
+        const configFunction = configs[config].function;
         if (configFunction !== undefined) shader += configs[config].function + "\n"
     }
 
@@ -44,10 +42,10 @@ async function build(config: Config) {
     shader += "@fragment\nfn fragment_main(@builtin(position) pos: vec4f) -> @location(0) vec4f {\n"
 
     // assemble inline expressions
-    shader += assembleInlines(config.root, configs)
+    shader += assembleInlines(root, configs)
 
-    shader += `return ${config.return};\n}\n`
-    // console.log(shader)
+    // add return value
+    shader += `return ${returnValue};\n}\n`
 
     return shader
 }
@@ -60,7 +58,7 @@ function assembleUniformList(node: Node, uniformType: "locals" | "globals", conf
         assembleUniformList(child, uniformType, configs, uniformArray)
 
     // add new uniforms to array if not added already
-    const config = configs[node.name]
+    const config = configs[node.name];
     if (config[uniformType] !== undefined) {
         for (const uniform of config[uniformType]) {
             if (!uniformArray.includes(uniform)) uniformArray.push(uniform)
@@ -97,7 +95,7 @@ function formatInlineIO(expression: string, node: Node, config: NodeConfig) {
             const input = node.inputs[input_name]
             const keyString = "$i{" + input_name + "}"
             while (inline.includes(keyString))
-                inline = inline.replace("$i{" + input_name + "}", input.value)
+                inline = inline.replace("$i{" + input_name + "}", formatInlineValue(input))
         }
     }
 
@@ -121,8 +119,47 @@ function formatInline(expression: string, keyString: string, value: string) {
     return inline
 }
 
-const Shaker = {
-    build
+function formatInlineValue(input: Input) {
+    // if a string, number, or array, coerce input value to a valid string
+    if (typeof input.value === "string") return input.value;
+    if (typeof input.value === "number") return input.value.toString();
+    if (Array.isArray(input.value)) {
+        if (input.data_type === "float")
+            return `vec${input.value.length}f(${input.value.join(", ")})`;
+        throw new Error("Invalid input data type");
+    }
+
+    // if linked to another node, get the value from the linked node
+    if ("text" in input.value) return input.value.text;
+
+    throw new Error("Invalid input value");
 }
 
-export default Shaker
+export function buildTemplate(returnValue: string) {
+    // assemble local and global uniform lists
+    const localUniforms = [ "res"]
+    const globalUniforms = [ "frame" ]
+
+    // begin assembling shader, insert required uniforms
+    let shader = ""
+
+    localUniforms.forEach((uniform, idx) => {
+        const type = localTypes[uniform]
+        if (type === undefined) console.error(`Unknown local uniform ${uniform}`)
+        shader += `@group(1) @binding(${idx}) var<uniform> ${uniform}: ${type};\n`
+    })
+
+    globalUniforms.forEach((uniform, idx) => {
+        const type = globalTypes[uniform]
+        if (type === undefined) console.error(`Unknown global uniform ${uniform}`)
+        shader += `@group(0) @binding(${idx}) var<uniform> ${uniform}: ${type};\n`
+    })
+
+    // begin assembling main function
+    shader += "@fragment\nfn fragment_main(@builtin(position) pos: vec4f) -> @location(0) vec4f {\n"
+
+    // add return value
+    shader += `return ${returnValue};\n}\n`
+
+    return shader
+}
