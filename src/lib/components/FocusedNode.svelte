@@ -48,7 +48,7 @@
 <div class="node">
     <div class="node-connectors">
         {#each Object.values(node.outputs) as output}
-            <OutputConnector {output} />
+            <OutputConnector {output} {node} />
         {/each}
     </div>
     <div class="node-header">
@@ -79,7 +79,7 @@
                     />
                 {/if}
                 <div class="input-connector">
-                    <InputConnector input={node.inputs[key]} />
+                    <InputConnector input={node.inputs[key]} {node} />
                 </div>
             </div>
         {/each}

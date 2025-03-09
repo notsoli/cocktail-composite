@@ -1,17 +1,24 @@
 <script lang="ts">
-    import { isCompatible, type Input } from "$lib/scripts/tree.svelte";
-    const { input } : { input: Input} = $props();
+    import { type Input } from "$lib/scripts/tree.svelte";
+    import { isCompatible, isAdjacent } from "$lib/scripts/editor.svelte";
     import { editor } from "$lib/scripts/editor.svelte";
+    import type { Node } from "$lib/scripts/tree.svelte";
 
-    const selected = $derived( editor.selectedInput === input );
-    const compatible = $derived( editor.selectedOutput && isCompatible(input, editor.selectedOutput) );
+    const { input, node } : { input: Input, node: Node } = $props();
+
+    const selected = $derived( editor.selectedInput?.input === input );
+    const compatible = $derived(
+        editor.selectedOutput &&
+        isCompatible(input, editor.selectedOutput.output) &&
+        isAdjacent(node, editor.selectedOutput.node)
+    );
     
     function selectInput(e: MouseEvent) {
         e.stopPropagation();
         if (!editor.selectedOutput) {
-            editor.selectedInput = input;
+            editor.selectedInput = { input, node };
         } else {
-            input.value = editor.selectedOutput;
+            input.value = editor.selectedOutput.output;
             editor.selectedOutput = null;
             editor.selectedInput = null;
         }

@@ -48,7 +48,7 @@
     <canvas bind:this={canvas}></canvas>
     <div class="node-connectors">
         {#each Object.values(node.inputs) as input}
-            <InputConnector {input} />
+            <InputConnector {input} {node} />
         {/each}
     </div>
 </div>

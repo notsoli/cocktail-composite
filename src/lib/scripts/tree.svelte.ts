@@ -255,30 +255,3 @@ export function removeNode(node: Node): Node | null {
 
     return parent;
 }
-
-/**
- * Checks if two data types are compatible for linking.
- * 
- * @param input The input to check
- * @param output The output to check
- * @returns True if the data types are compatible, false otherwise
- */
-export function isCompatible(input: Input, output: Output): boolean {
-    if (input.data_type === output.data_type) return true;
-
-    if (typeof input.value === "number") {
-        if (input.data_type === "float" && output.data_type === "f32") return true;
-    }
-
-    if (Array.isArray(input.value)) {
-        if (input.data_type === "float" && input.value.length == 2 && output.data_type === "vec2f") return true;
-        if (input.data_type === "float" && input.value.length == 3 && output.data_type === "vec3f") return true;
-        if (input.data_type === "float" && input.value.length == 4 && output.data_type === "vec4f") return true;
-    }
-
-    if (typeof input.value === "object" && "text" in input.value) {
-        if (input.value.data_type === output.data_type) return true;
-    }
-
-    return false;
-}

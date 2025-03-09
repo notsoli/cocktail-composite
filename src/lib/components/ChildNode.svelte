@@ -46,7 +46,7 @@
 >
     <div class="node-connectors">
         {#each Object.values(node.outputs) as output}
-            <OutputConnector {output} />
+            <OutputConnector {output} {node} />
         {/each}
     </div>
     <h2>{node.display_name}</h2>
