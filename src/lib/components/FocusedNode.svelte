@@ -114,10 +114,16 @@
 
     .node-header {
         display: flex;
-        justify-content: space-between;
+        justify-content: center;
         align-items: center;
         gap: var(--medium-gap);
         padding: var(--medium-gap);
+    }
+
+    .node-header button {
+        position: absolute;
+        left: var(--medium-gap);
+        top: var(--medium-gap);
     }
 
     .node-parameters {
