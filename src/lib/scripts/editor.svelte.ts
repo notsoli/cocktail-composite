@@ -2,24 +2,31 @@ import type { Node } from './tree.svelte';
 import type { NodeConfig } from './config';
 import type { Input, Output } from './tree.svelte';
 
-
 export const editor: {
     focusedNode: Node | null,
     selectedEffect: NodeConfig | null,
     selectedInput: {
         input: Input
         node: Node
-    } | null
+    } | null,
     selectedOutput: {
         output: Output
         node: Node
-    } | null
+    } | null,
+    linkedConnectors: LinkedConnectors[]
 } = $state({
     focusedNode: null,
     selectedEffect: null,
     selectedInput: null,
-    selectedOutput: null
+    selectedOutput: null,
+    linkedConnectors: []
 });
+
+export type LinkedConnectors = {
+    c1: HTMLButtonElement,
+    c2: HTMLButtonElement,
+    input: Input
+}
 
 /**
  * Checks if an input and output are compatible for linking.

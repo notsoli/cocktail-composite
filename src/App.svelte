@@ -13,6 +13,7 @@
     import ParentNode from "$lib/components/ParentNode.svelte";
     import FocusedNode from "$lib/components/FocusedNode.svelte";
     import ChildNode from "$lib/components/ChildNode.svelte";
+    import LinkedConnectors from "$lib/components/LinkedConnectors.svelte";
 
     // state imports
     import { tree, getParentNode } from "$lib/scripts/tree.svelte";
@@ -133,6 +134,10 @@
                         {/if}
                     </div>
                 </div>
+                <div id="linked-connectors">
+                    {#each editor.linkedConnectors as linkedConnectors }
+                        <LinkedConnectors {linkedConnectors} />
+                    {/each}
             </section>
             <section id="effect-view">
                 <h1>effect toolkit</h1>

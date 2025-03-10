@@ -30,6 +30,7 @@
     aria-label={`${output.display_name} output connector`}
     onclick={selectOutput}
     class={{ selected, compatible }}
+    data-connector={output.text}
     disabled={editor.selectedInput && !compatible}
 ></button>
 

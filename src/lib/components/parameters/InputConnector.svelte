@@ -3,8 +3,10 @@
     import { isCompatible, isAdjacent } from "$lib/scripts/editor.svelte";
     import { editor } from "$lib/scripts/editor.svelte";
     import type { Node } from "$lib/scripts/tree.svelte";
+    import { tick } from "svelte";
 
     const { input, node } : { input: Input, node: Node } = $props();
+    let connector: HTMLButtonElement;
 
     const selected = $derived( editor.selectedInput?.input === input );
     const compatible = $derived(
@@ -23,6 +25,31 @@
             editor.selectedInput = null;
         }
     }
+
+    $effect(() => {
+        if (typeof input.value === "object" && "text" in input.value) {
+            addLinkedConnector();
+            return removeLinkedConnector;
+        }
+    });
+
+    async function addLinkedConnector() {
+        if (typeof input.value !== "object" || !("text" in input.value)) return;
+        await tick();
+        const output_connector = document.querySelector<HTMLButtonElement>(`[data-connector="${input.value.text}"]`);
+        if (output_connector) {
+            editor.linkedConnectors = [
+                ...editor.linkedConnectors,
+                { c1: connector, c2: output_connector, input}
+            ];
+        }
+    }
+
+    function removeLinkedConnector() {
+        editor.linkedConnectors = editor.linkedConnectors.filter(
+            ({ c1 }) => c1 !== connector
+        );
+    }
 </script>
 
 <button
@@ -30,6 +57,7 @@
     onclick={selectInput}
     class={{ selected, compatible }}
     disabled={editor.selectedOutput && !compatible}
+    bind:this={connector}
 ></button>
 
 <style>
