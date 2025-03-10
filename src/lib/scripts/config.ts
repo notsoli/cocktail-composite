@@ -13,7 +13,7 @@ export type NodeConfig = {
     inline: string
 };
 
-type DisplayInputConfig = {
+export type DisplayInputConfig = {
     input_type: "display"
     data_type: Type
     default: string

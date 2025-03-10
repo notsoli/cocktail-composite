@@ -79,7 +79,7 @@
                     />
                 {/if}
                 <div class="input-connector">
-                    <InputConnector input={node.inputs[key]} {node} />
+                    <InputConnector input={node.inputs[key]} {node} config={config.inputs![key]} />
                 </div>
             </div>
         {/each}

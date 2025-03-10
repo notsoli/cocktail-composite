@@ -4,8 +4,14 @@
     import { editor } from "$lib/scripts/editor.svelte";
     import type { Node } from "$lib/scripts/tree.svelte";
     import { tick } from "svelte";
+    import type { NumberInputConfig, DisplayInputConfig } from "$lib/scripts/config";
 
-    const { input, node } : { input: Input, node: Node } = $props();
+    const { input, node, config } : {
+        input: Input,
+        node: Node,
+        config: NumberInputConfig | DisplayInputConfig
+    } = $props();
+
     let connector: HTMLButtonElement;
 
     const selected = $derived( editor.selectedInput?.input === input );
@@ -38,9 +44,13 @@
         await tick();
         const output_connector = document.querySelector<HTMLButtonElement>(`[data-connector="${input.value.text}"]`);
         if (output_connector) {
+            const unlink = () => {
+                removeLinkedConnector();
+                input.value = config.default;
+            };
             editor.linkedConnectors = [
                 ...editor.linkedConnectors,
-                { c1: connector, c2: output_connector, input}
+                { c1: connector, c2: output_connector, unlink }
             ];
         }
     }

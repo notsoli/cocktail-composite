@@ -25,7 +25,7 @@ export const editor: {
 export type LinkedConnectors = {
     c1: HTMLButtonElement,
     c2: HTMLButtonElement,
-    input: Input
+    unlink: () => void
 }
 
 /**

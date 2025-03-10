@@ -27,13 +27,34 @@
     }
 </script>
 
-<svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;">
+<svg>
     <line 
+        role="button"
+        tabindex=0
         x1={c1Position.x} 
         y1={c1Position.y} 
         x2={c2Position.x} 
         y2={c2Position.y}
         stroke="var(--accent-color)"
         stroke-width="4"
+        onclick={linkedConnectors.unlink}
+        onkeypress={e => e.key === "Enter" && linkedConnectors.unlink()}
     />
 </svg>
+
+<style>
+    svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    line {
+        pointer-events: all;
+        cursor: pointer;
+    }
+</style>

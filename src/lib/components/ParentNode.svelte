@@ -47,8 +47,11 @@
     <h2>{node.display_name}</h2>
     <canvas bind:this={canvas}></canvas>
     <div class="node-connectors">
-        {#each Object.values(node.inputs) as input}
-            <InputConnector {input} {node} />
+        {#each Object.keys(node.inputs) as input_name}
+            <InputConnector {node}
+                input={node.inputs[input_name]}
+                config={tree.configs[node.name].inputs![input_name]}
+            />
         {/each}
     </div>
 </div>
