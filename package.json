@@ -18,6 +18,6 @@
     "vite": "^6.2.0"
   },
   "dependencies": {
-    "devolute": "^1.0.1"
+    "devolute": "^1.0.2"
   }
 }
