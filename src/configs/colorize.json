@@ -1,0 +1,31 @@
+{
+    "name": "colorize",
+    "description": "mixes between two colors based on a value from 0 to 1",
+    "locals": [ "res" ],
+    "inputs": {
+        "value": {
+            "input_type": "display",
+            "data_type": "f32",
+            "default": "pos.x / res.x"
+        },
+        "color1": {
+            "display_name": "color 1",
+            "input_type": "color",
+            "data_type": "float",
+            "default": "#f6f4f2"
+        },
+        "color2": {
+            "display_name": "color 2",
+            "input_type": "color",
+            "data_type": "float",
+            "default": "#e0772d"
+        }
+    },
+    "outputs": {
+        "mixed_value": {
+            "display_name": "mixed value",
+            "data_type": "vec4f"
+        }
+    },
+    "inline": "let $o{mixed_value} = mix($i{color1}, $i{color2}, $i{value});"
+}
