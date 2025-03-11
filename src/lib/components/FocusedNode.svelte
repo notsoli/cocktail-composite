@@ -8,8 +8,9 @@
     // components
     import NumberParameter from "./parameters/NumberParameter.svelte";
     import DisplayParameter from "./parameters/DisplayParameter.svelte";
+    import ColorParameter from "./parameters/ColorParameter.svelte";
     import { createPass, removePass, type Pass } from "devolute";
-    import type { NumberInputConfig } from "$lib/scripts/config";
+    import type { ColorInputConfig, NumberInputConfig } from "$lib/scripts/config";
 
     // state
     const { node }: { node: Node } = $props();
@@ -76,6 +77,11 @@
                     <DisplayParameter
                         input={node.inputs[key]}
                         {node}
+                    />
+                {:else if node.inputs[key].input_type === "color"}
+                    <ColorParameter
+                        input={node.inputs[key]}
+                        config={config.inputs![key] as ColorInputConfig}
                     />
                 {/if}
                 <div class="input-connector">

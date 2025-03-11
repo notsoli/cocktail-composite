@@ -39,7 +39,14 @@ export type NumberInput = {
     display_name: string
 }
 
-export type Input = DisplayInput | NumberInput
+export type ColorInput = {
+    input_type: "color",
+    data_type: "float",
+    value: number[] | Output,
+    display_name: string
+}
+
+export type Input = DisplayInput | NumberInput | ColorInput
 
 export type Output = {
     data_type: Type
@@ -71,7 +78,7 @@ export function formatNodeConfig(nodeid: number, config: NodeConfig): Node {
                 }
 
                 inputs[input_name] = new_input;
-            } else {
+            } else if (input_config.input_type === "number") {
                 // Create copy of default value if it's an array
                 // as to not modify the default value in the config
                 const value = (Array.isArray(input_config.default)) ?
@@ -81,6 +88,15 @@ export function formatNodeConfig(nodeid: number, config: NodeConfig): Node {
                     data_type: input_config.data_type,
                     input_type: "number",
                     value,
+                    display_name: name
+                }
+
+                inputs[input_name] = new_input;
+            } else if (input_config.input_type === "color") {
+                const new_input: ColorInput = {
+                    data_type: input_config.data_type,
+                    input_type: "color",
+                    value: hexToArray(input_config.default),
                     display_name: name
                 }
 
@@ -243,7 +259,9 @@ export function removeNode(node: Node): Node | null {
             // set input value to default
             const config = tree.configs[parent.name];
             const input_config = config.inputs![input_name];
-            input.value = input_config.default;
+            if (input_config.input_type === "color")
+                input.value = hexToArray(input_config.default);
+            else input.value = input_config.default;
         }
     }
 
@@ -254,4 +272,30 @@ export function removeNode(node: Node): Node | null {
     parent.children = [...parent.children, ...node.children];
 
     return parent;
+}
+
+/**
+ * Converts a hex color string (format: "#RRGGBB") to an array of RGB values.
+ * 
+ * @param hexColor The hex color string (with or without leading #)
+ * @returns An array containing normalized RGB values [r, g, b] with values from 0 to 1
+ * @throws Error if the input is not a valid 6-character hex color string
+ */
+export function hexToArray(hexColor: string): number[] {
+    // Remove # if present
+    const hex = hexColor.startsWith('#') ? hexColor.substring(1) : hexColor;
+    
+    // Validate hex format (exactly 6 characters)
+    const isValidHex = /^[0-9A-Fa-f]{6}$/.test(hex);
+    if (!isValidHex) {
+        throw new Error(`Invalid hex color format: ${hexColor}. Expected format: #RRGGBB`);
+    }
+    
+    // Parse RGB components and normalize to 0-1 range
+    const r = parseInt(hex.substring(0, 2), 16) / 255;
+    const g = parseInt(hex.substring(2, 4), 16) / 255;
+    const b = parseInt(hex.substring(4, 6), 16) / 255;
+    
+    // Return as array of RGB values
+    return [r, g, b, 1.0];
 }

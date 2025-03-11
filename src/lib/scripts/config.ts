@@ -27,7 +27,14 @@ export type NumberInputConfig = {
     display_name?: string
 };
 
-type InputConfig = DisplayInputConfig | NumberInputConfig;
+export type ColorInputConfig = {
+    input_type: "color"
+    data_type: "float"
+    default: string
+    display_name?: string
+}
+
+export type InputConfig = DisplayInputConfig | NumberInputConfig | ColorInputConfig;
 
 type OutputConfig = {
     data_type: Type
@@ -160,8 +167,8 @@ function validateInput(input: any, key: string): ValidationResult {
     }
 
     // Check input_type
-    if (!input.input_type || (input.input_type !== 'display' && input.input_type !== 'number')) {
-        return { valid: false, error: `Input "${key}" has invalid "input_type": must be "display" or "number"` };
+    if (!input.input_type || (input.input_type !== 'display' && input.input_type !== 'number' && input.input_type !== 'color')) {
+        return { valid: false, error: `Input "${key}" has invalid "input_type": must be "display", "number", or "color"` };
     }
 
     // Validate display_name if present
@@ -174,6 +181,8 @@ function validateInput(input: any, key: string): ValidationResult {
         return validateDisplayInput(input, key);
     } else if (input.input_type === 'number') {
         return validateNumberInput(input, key);
+    } else if (input.input_type === 'color') {
+        return validateColorInput(input, key);
     }
 
     return { valid: true };
@@ -228,6 +237,36 @@ function validateNumberInput(input: any, key: string): ValidationResult {
         };
     }
 
+    return { valid: true };
+}
+
+/**
+ * Validates a color input configuration
+ * @param input The color input configuration to validate
+ * @param key The name of the input
+ * @returns A validation result
+ */
+function validateColorInput(input: any, key: string): ValidationResult {
+    // Check data_type (must be vec4f for color inputs)
+    if (!input.data_type || input.data_type !== 'float') {
+        return {
+            valid: false,
+            error: `Color input "${key}" has invalid "data_type": must be "float"`
+        };
+    }
+
+    // Check default
+    if (input.default === undefined || typeof input.default !== 'string') {
+        return { 
+            valid: false, 
+            error: `Color input "${key}" must have a string "default" value` 
+        };
+    }
+
+    // Optional: Add validation for valid color format (e.g., vec4f format or hex color)
+    // For example, you could check if the string starts with "vec4f(" or matches a hex pattern
+    // This is optional and depends on what format you expect for color inputs
+    
     return { valid: true };
 }
 

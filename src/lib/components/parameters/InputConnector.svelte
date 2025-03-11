@@ -1,15 +1,14 @@
 <script lang="ts">
-    import { type Input } from "$lib/scripts/tree.svelte";
+    import { hexToArray, type Node, type Input } from "$lib/scripts/tree.svelte";
     import { isCompatible, isAdjacent } from "$lib/scripts/editor.svelte";
     import { editor } from "$lib/scripts/editor.svelte";
-    import type { Node } from "$lib/scripts/tree.svelte";
     import { tick } from "svelte";
-    import type { NumberInputConfig, DisplayInputConfig } from "$lib/scripts/config";
+    import type { InputConfig } from "$lib/scripts/config";
 
     const { input, node, config } : {
         input: Input,
         node: Node,
-        config: NumberInputConfig | DisplayInputConfig
+        config: InputConfig
     } = $props();
 
     let connector: HTMLButtonElement;
@@ -46,7 +45,9 @@
         if (output_connector) {
             const unlink = () => {
                 removeLinkedConnector();
-                input.value = config.default;
+                if (input.input_type === "color" && config.input_type === "color")
+                    input.value = hexToArray(config.default);
+                else input.value = config.default;
             };
             editor.linkedConnectors = [
                 ...editor.linkedConnectors,
