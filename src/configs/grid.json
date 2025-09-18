@@ -4,23 +4,24 @@
     "locals": [ "res" ],
     "inputs": {
         "position": {
-            "type": "vec2f",
-            "default": "pos.xy / res",
-            "display": true
+            "input_type": "display",
+            "data_type": "vec2f",
+            "default": "pos.xy / res"
         },
         "tiles": {
-            "type": "f32",
-            "default": "3."
+            "input_type": "number",
+            "data_type": "float",
+            "default": 3
         }
     },
     "outputs": {
         "new_position": {
             "display_name": "new position",
-            "type": "vec2f"
+            "data_type": "vec2f"
         },
         "tile_index": {
             "display_name": "tile index",
-            "type": "vec2f"
+            "data_type": "vec2f"
         }
     },
     "inline": "let v_$id{} = $i{position} * $i{tiles}; let $o{new_position} = fract(v_$id{}); let $o{tile_index} = floor(v_$id{});"
